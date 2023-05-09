@@ -8,7 +8,7 @@ The implementation of the client is not a part of the project (maybe yet).
 
 ## Detailed specifications
 
-The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in configuration file as constant `COMMAND_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the Special situations section).
+The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in configuration file as constant `CMD_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the Special situations section).
 
 Server messages (showed with default message ending):
 
@@ -30,13 +30,13 @@ Server messages (showed with default message ending):
 Client messages:
 |Name |Message |Description | Example | Max length |
 |-|-|-|-|-|
-|CLIENT_USERNAME |\<user name>\a\b | Message with username. The name can be any sequence of characters except the `COMMAND_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` message.| Umpa_Lumpa\a\b| 20|
+|CLIENT_USERNAME |\<user name>\a\b | Message with username. The name can be any sequence of characters except the `CMD_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` message.| Umpa_Lumpa\a\b| 20|
 |CLIENT_KEY_ID |\<Key ID>\a\b | Message containing Key ID. It can only contain an integer of up to three digits. |2\a\b |5 |
 |CLIENT_CONFIRMATION |<16-bit number in decimal notation>\a\b | Message with confirmation code. It can contain a maximum of 5 numbers and the termination sequence.| 1009\a\b| 7|
 |CLIENT_OK |OK \<x> \<y>\a\b |Acknowledgement of motion execution, where x and y are the integer coordinates of the robot after executing the motion command. | OK -3 -1\a\b| 12|
 |CLIENT_RECHARGING |RECHARGING\a\b |The robot started to recharge and stopped responding to messages. | | 12|
 |CLIENT_FULL_POWER |FULL POWER\a\b |The robot has replenished power and is taking commands again. | | 12|
-|CLIENT_MESSAGE |\<text>\a\b |The text of the secret message that was picked up. It can be any sequence of characters except the `COMMAND_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` message. | Haf!\a\b| 100|
+|CLIENT_MESSAGE |\<text>\a\b |The text of the secret message that was picked up. It can be any sequence of characters except the `CMD_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` message. | Haf!\a\b| 100|
 
 Time constants (defined in config file):
 |Name | Default value| Description |
@@ -209,15 +209,15 @@ Some robots may have corrupted firmware and so may not communicate properly. The
 
 ### Authentication errors
 
-If there is a Key ID in the `CLIENT_KEY_ID` message that is outside the expected range, the server responds with a `SERVER_KEY_OUT_OF_RANGE_ERROR` error message and terminates the connection. Negative values are also considered a number. If there is not only number, excluding `COMMAND_POSTFIX`, in the `CLIENT_KEY_ID` message, the server responds with a `SERVER_SYNTAX_ERROR` error.
+If there is a Key ID in the `CLIENT_KEY_ID` message that is outside the expected range, the server responds with a `SERVER_KEY_OUT_OF_RANGE_ERROR` error message and terminates the connection. Negative values are also considered a number. If there is not only number, excluding `CMD_POSTFIX`, in the `CLIENT_KEY_ID` message, the server responds with a `SERVER_SYNTAX_ERROR` error.
 
-If there is a numeric value (my be negative) in the `CLIENT_CONFIRMATION` message, excluding `COMMAND_POSTFIX` that does not match the expected confirmation, the server sends a `SERVER_LOGIN_FAILED` message and terminates the connection. If it is not a purely numeric value at all, the server sends a `SERVER_SYNTAX_ERROR` message and terminates the connection.
+If there is a numeric value (my be negative) in the `CLIENT_CONFIRMATION` message, excluding `CMD_POSTFIX` that does not match the expected confirmation, the server sends a `SERVER_LOGIN_FAILED` message and terminates the connection. If it is not a purely numeric value at all, the server sends a `SERVER_SYNTAX_ERROR` message and terminates the connection.
 
 ### Syntax error
 
 The server always responds to a syntax error immediately after receiving the message in which it detected the error. The server sends the `SERVER_SYNTAX_ERROR` message to the robot and then must terminate the connection as soon as possible. Syntactically incorrect messages:
 
-- The incoming message is longer than the number of characters defined for each message (including the `COMMAND_POSTFIX` terminating characters). Length for every message is defined in the client message summary table.
+- The incoming message is longer than the number of characters defined for each message (including the `CMD_POSTFIX` terminating characters). Length for every message is defined in the client message summary table.
 - The incoming message does not syntactically match any of the `CLIENT_USERNAME`, `CLIENT_KEY_ID`, `CLIENT_CONFIRMATION`, `CLIENT_OK`, `CLIENT_RECHARGING`, and `CLIENT_FULL_POWER` messages.
 
 ### Logical error
@@ -240,7 +240,7 @@ When communicating over a more complicated network infrastructure, two situation
 
 ## Server optimization
 
-The server optimizes the protocol by not waiting for the completion of a message that is obviously bad. For example, when prompted for authentication, the robot sends only the username portion of the message. For example, the server receives 22 characters of the username, but still has not received the `COMMAND_POSTFIX` termination sequence. Since the maximum message length is 20 characters, it is clear that the received message cannot be valid. The server therefore responds by not waiting for the rest of the message, but sends a `SERVER_SYNTAX_ERROR` message and terminates the connection. In principle, it should do the same when retrieving a secret message.
+The server optimizes the protocol by not waiting for the completion of a message that is obviously bad. For example, when prompted for authentication, the robot sends only the username portion of the message. For example, the server receives 22 characters of the username, but still has not received the `CMD_POSTFIX` termination sequence. Since the maximum message length is 20 characters, it is clear that the received message cannot be valid. The server therefore responds by not waiting for the rest of the message, but sends a `SERVER_SYNTAX_ERROR` message and terminates the connection. In principle, it should do the same when retrieving a secret message.
 
 For the part of the communication in which the robot navigates to the destination coordinates, it expects three possible messages: `CLIENT_OK`, `CLIENT_RECHARGING` or `CLIENT_FULL_POWER`. If the server reads part of an incomplete message and that part is longer than the maximum length of these messages, it sends `SERVER_SYNTAX_ERROR` and terminates the connection.
 
