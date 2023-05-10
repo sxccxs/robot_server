@@ -30,7 +30,7 @@ Server messages (showed with default message ending):
 | SERVER_KEY_OUT_OF_RANGE_ERROR | 303 KEY OUT OF RANGE\a\b                | Key ID not in expected range                                                                     |
 
 Client messages:
-|Name |Message |Description | Example | Max length without `CMD_POSTFIX` |
+|Name |Message |Description | Example | Max length not including `CMD_POSTFIX` |
 |-|-|-|-|-|
 |CLIENT_USERNAME |\<user name>\a\b | Message with username. The name can be any sequence of characters except the `CMD_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` messages.| Umpa_Lumpa\a\b| 18|
 |CLIENT_KEY_ID |\<Key ID>\a\b | Message containing Key ID. It can only contain an integer of up to three digits. |2\a\b |3 |
