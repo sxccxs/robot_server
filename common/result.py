@@ -5,13 +5,13 @@ T = TypeVar("T")
 E = TypeVar("E", bound=Exception)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Ok(Generic[T]):
     value: T
     __match_args__ = ("value",)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Err(Generic[E]):
     error: E
     __match_args__ = ("error",)
