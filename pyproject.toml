@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "robot-server"
+version = "0.1.0"
+description = "This is an asynchronous TCP/IP Server implementing communication for automatic control of remote robots."
+authors = ["Hryhorii Biloshenko <hryhorii.biloshenko@gmail.com>"]
+readme = "README.md"
+packages = [{include = "robot_server"}]
+
+[tool.poetry.dependencies]
+python = "^3.11.3"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
