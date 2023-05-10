@@ -104,7 +104,7 @@ The server does not know the usernames in advance. Therefore, robots can choose 
 
 The robot can only move straight (`SERVER_MOVE`) and is able to perform a turn in place to the right (`SERVER_TURN_RIGHT`) and to the left (`SERVER_TURN_LEFT`). After each movement command, it sends an acknowledgement (`CLIENT_OK`), which includes the current coordinates. The position of the robot is not known to the server at the beginning of the communication. The server has to find out the position of the robot (position and direction) only from its responses. In order to prevent the robot from wandering endlessly in space, each robot has a limited number of movements (only moving forward). The number of movements should be sufficient to reasonably move the robot to the target. The following is a demonstration of communication. The server first moves the robot forward twice to detect its current state and then guides it towards the target coordinate [0,0].
 
-Not the most efficient movement algorithm is used in the moment.
+Not the most efficient movement algorithm is used at the moment.
 
 Just after authentication, the robot expects at least one motion command - `SERVER_MOVE`, `SERVER_TURN_LEFT` or `SERVER_TURN_RIGHT`. You cannot try to pick up the secret right away. There are many obstacles along the way that robots must overcome by detouring. The following rules apply to the obstacles:
 
