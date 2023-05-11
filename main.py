@@ -14,12 +14,10 @@ def configure_logging() -> None:
     logging.config.dictConfig(config)
 
 
-configure_logging()
-
-
-
 async def main():
-    pass
+    configure_logging()
+
+
 
 
 if __name__ == "__main__":
