@@ -2,7 +2,12 @@ from typing import Protocol, Unpack
 
 from server.command_handlers.command_creator import CommandCreator, CommandCreatorKwargs, DefaultCommandCreator
 from server.command_handlers.command_matcher import CommandMatcher, CommandMatcherKwargs, DefaultCommandMatcher
-from server.socket_handlers.read_handler import ReadHandler, ReadHandlerKwargs, Split2BytesReadHandler
+from server.socket_handlers.read_handler import (
+    ReadHandler,
+    ReadHandlerKwargs,
+    Recharging2BytesReadHandler,
+    Split2BytesReadHandler,
+)
 from server.socket_handlers.write_handler import DefaultWriteHandler, WriteHandler, WriteHandlerKwargs
 
 
@@ -32,3 +37,8 @@ class DefaultManipulators:
 
     def get_writer(self, **kwargs: Unpack[WriteHandlerKwargs]) -> WriteHandler:
         return DefaultWriteHandler(**kwargs)
+
+
+class RechargingManipulators(DefaultManipulators):
+    def get_reader(self, **kwargs: Unpack[ReadHandlerKwargs]) -> ReadHandler:
+        return Recharging2BytesReadHandler(**kwargs)
