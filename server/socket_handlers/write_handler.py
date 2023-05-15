@@ -37,3 +37,12 @@ class WriteHandler(ABC):
             await self.writer.wait_closed()
         except ConnectionResetError:
             self.logger.debug("Connection was closed by client")
+
+
+class DefaultWriteHandler(WriteHandler):
+    async def write(self, data: bytes) -> None:
+        self.logger.debug(f"Recieved data: {data}")
+        self.writer.write(data)
+        self.writer.write(self.command_end)
+        await self.writer.drain()
+        self.logger.debug(f"Sended message: {data + self.command_end}")
