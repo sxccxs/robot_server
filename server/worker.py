@@ -46,3 +46,12 @@ class Worker(ABC):
     @abstractmethod
     async def close(self) -> None:
         ...
+
+
+class DefaultWorker(Worker):
+    async def do(self) -> None:
+        self.logger.info(f"Started new worker {self.worker_id}")
+
+    async def close(self) -> None:
+        await self.writer.close()
+        self.logger.info(f"Ended worker {self.worker_id}")
