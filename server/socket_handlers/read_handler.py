@@ -6,10 +6,11 @@ from io import BytesIO
 from logging import Logger
 from typing import Required, TypedDict
 
-from common.config import CMD_POSTFIX_B, TIMEOUT
+from common.commands import ClientCommand
+from common.config import CMD_POSTFIX_B, TIMEOUT, TIMEOUT_RECHARGING
 from common.result import Err, Ok
 from server.command_handlers.command_matcher import CommandMatcher
-from server.exceptions import ServerTimeoutError
+from server.exceptions import LogicError, ServerTimeoutError
 from server.server_result import ServerResult
 from server.socket_handlers.types import SeparatorChecker
 
@@ -126,3 +127,55 @@ class Split2BytesReadHandler(ReadHandler):
             return chunk, None
 
         return _inner
+
+
+@dataclass(slots=True)
+class Recharging2BytesReadHandler(ReadHandler):
+    _subreader: Split2BytesReadHandler = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._subreader = Split2BytesReadHandler(
+            self.reader, self.matcher, logger=self.logger, _chunk_size=self._chunk_size
+        )
+
+    async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
+        read_length = max(max_len, ClientCommand.CLIENT_RECHARGING.max_len_postfix)  # for correct recharging read
+        match await self._subreader.read(read_length, timeout=timeout):
+            case Err() as err:
+                return err
+            case Ok(data):
+                pass
+        match self.matcher.match(ClientCommand.CLIENT_RECHARGING, data):
+            case Err():
+                match self.matcher.match(ClientCommand.CLIENT_FULL_POWER, data):
+                    case Ok():
+                        return Err(LogicError(f"Unexpected command: {ClientCommand.CLIENT_FULL_POWER.name}"))
+                    case Err():
+                        return Ok(data[:max_len])
+            case Ok():
+                self.logger.info("Recharging begin")
+                return await self._handle_recharging(max_len, timeout)
+
+    async def _handle_recharging(self, max_len: int, timeout: int = TIMEOUT) -> ServerResult[bytes]:
+        match await self._subreader.read(
+            ClientCommand.CLIENT_FULL_POWER.max_len_postfix, timeout=TIMEOUT_RECHARGING
+        ):
+            case Err() as err:
+                self.logger.debug(f"Error while recharging: {err=}")
+                return err
+            case Ok(data):
+                pass
+        match self.matcher.match(ClientCommand.CLIENT_FULL_POWER, data):
+            case Err(err):
+                return Err(
+                    LogicError(
+                        f"Unexpected command. Expected: {ClientCommand.CLIENT_FULL_POWER.name}. Got data: {data}"
+                    )
+                )
+            case Ok():
+                self.logger.info("Recharging done")
+        match await self._subreader.read(max_len, timeout=timeout):
+            case Err() as err:
+                return err
+            case Ok(data):
+                return Ok(data)
