@@ -2,6 +2,7 @@ from typing import Protocol, Unpack
 
 from server.command_handlers.command_creator import CommandCreator, CommandCreatorKwargs, DefaultCommandCreator
 from server.command_handlers.command_matcher import CommandMatcher, CommandMatcherKwargs, DefaultCommandMatcher
+from server.services.authenticator import Authenticator, AuthenticatorKwargs, DefaultAuthenticator
 from server.socket_handlers.read_handler import (
     ReadHandler,
     ReadHandlerKwargs,
@@ -24,6 +25,9 @@ class Manipulators(Protocol):
     def get_writer(self, **kwargs: Unpack[WriteHandlerKwargs]) -> WriteHandler:
         ...
 
+    def get_autheticator(self, **kwargs: Unpack[AuthenticatorKwargs]) -> Authenticator:
+        ...
+
 
 class DefaultManipulators:
     def get_matcher(self, **kwargs: Unpack[CommandMatcherKwargs]) -> CommandMatcher:
@@ -37,6 +41,9 @@ class DefaultManipulators:
 
     def get_writer(self, **kwargs: Unpack[WriteHandlerKwargs]) -> WriteHandler:
         return DefaultWriteHandler(**kwargs)
+
+    def get_autheticator(self, **kwargs: Unpack[AuthenticatorKwargs]) -> Authenticator:
+        return DefaultAuthenticator(**kwargs)
 
 
 class RechargingManipulators(DefaultManipulators):
