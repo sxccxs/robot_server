@@ -1,17 +1,12 @@
-from dataclasses import InitVar, dataclass, field
 from enum import Enum, StrEnum, auto
 
 from common.config import CMD_POSTFIX
 
 
-@dataclass(slots=True)
 class TextLength:
-    val: InitVar[int | str]
-    cmd_text: str | None = field(init=False)
-    max_len: int = field(init=False)
-    max_len_postfix: int = field(init=False)
+    __slots__ = ("cmd_text", "max_len", "max_len_postfix")
 
-    def __post_init__(self, val: int | str) -> None:
+    def __init__(self, val: int | str) -> None:
         self.cmd_text = val if isinstance(val, str) else None
         self.max_len = val if isinstance(val, int) else len(self.cmd_text)  # type: ignore
         self.max_len_postfix = self.max_len + len(CMD_POSTFIX)
