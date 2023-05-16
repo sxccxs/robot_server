@@ -11,6 +11,7 @@ from server.exceptions import (
     CommandLoginFailError,
     CommandSyntaxError,
     LogicError,
+    MoveFailed,
     ServerError,
     ServerTimeoutError,
 )
@@ -57,6 +58,13 @@ class Worker(ABC):
             creator=self.creator,
             logger_=self.logger.getChild("authenticator"),
         )
+        self.mover = manipulators.get_mover(
+            reader=self.reader,
+            writer=self.writer,
+            matcher=self.matcher,
+            creator=self.creator,
+            logger_=self.logger.getChild("mover"),
+        )
 
     @abstractmethod
     async def do(self) -> None:
@@ -76,6 +84,12 @@ class DefaultWorker(Worker):
             case Ok():
                 pass
 
+        match await self._move_to_start():
+            case Err():
+                return
+            case Ok():
+                pass
+
     async def close(self) -> None:
         await self.writer.close()
         self.logger.info(f"Ended worker {self.worker_id}")
@@ -89,6 +103,16 @@ class DefaultWorker(Worker):
                 self.logger.info(f"Error while authenticating: {err=}")
                 await self._process_error(err)
                 return Err(AuthenticationFailed(err))
+
+    async def _move_to_start(self) -> NoneResult[MoveFailed]:
+        match await self.mover.move_to_start():
+            case Ok():
+                self.logger.info("Successfuly moved to coordinates (0,0)")
+                return Ok(None)
+            case Err(err):
+                self.logger.info(f"Error while moving: {err=}")
+                await self._process_error(err)
+                return Err(MoveFailed(err))
 
     async def _process_error(self, err: ServerError) -> None:
         match err:
