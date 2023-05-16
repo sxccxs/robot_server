@@ -2,7 +2,16 @@ from abc import ABC, abstractmethod
 from asyncio import StreamReader, StreamWriter
 from typing import NotRequired, TypedDict
 
+from common.commands import ServerCommand
 from common.data_classes import KeysPair
+from server.exceptions import (
+    CommandKeyIdOutOfRangeError,
+    CommandLoginFailError,
+    CommandSyntaxError,
+    LogicError,
+    ServerError,
+    ServerTimeoutError,
+)
 from server.manipulators import DefaultManipulators, Manipulators
 
 from . import logger as LOGGER_BASE
@@ -55,3 +64,30 @@ class DefaultWorker(Worker):
     async def close(self) -> None:
         await self.writer.close()
         self.logger.info(f"Ended worker {self.worker_id}")
+
+    async def _process_error(self, err: ServerError) -> None:
+        match err:
+            case CommandSyntaxError():
+                await self._send_syntax_error()
+            case LogicError():
+                await self._send_logic_error()
+            case CommandKeyIdOutOfRangeError():
+                await self._send_key_out_of_range()
+            case CommandLoginFailError():
+                await self._send_login_failed()
+            case ServerTimeoutError():
+                pass
+            case _:
+                raise err
+
+    async def _send_syntax_error(self) -> None:
+        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_SYNTAX_ERROR))
+
+    async def _send_key_out_of_range(self) -> None:
+        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_KEY_OUT_OF_RANGE_ERROR))
+
+    async def _send_login_failed(self) -> None:
+        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGIN_FAILED))
+
+    async def _send_logic_error(self) -> None:
+        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGIC_ERROR))
