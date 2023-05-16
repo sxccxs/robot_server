@@ -4,6 +4,7 @@ from server.command_handlers.command_creator import CommandCreator, CommandCreat
 from server.command_handlers.command_matcher import CommandMatcher, CommandMatcherKwargs, DefaultCommandMatcher
 from server.services.authenticator import Authenticator, AuthenticatorKwargs, DefaultAuthenticator
 from server.services.mover import DefaultMover, Mover, MoverKwargs
+from server.services.secret_receiver import DefaultSecretReceiver, SecretReceiver, SecretReceiverKwargs
 from server.socket_handlers.read_handler import (
     ReadHandler,
     ReadHandlerKwargs,
@@ -32,6 +33,9 @@ class Manipulators(Protocol):
     def get_mover(self, **kwargs: Unpack[MoverKwargs]) -> Mover:
         ...
 
+    def get_receiver(self, **kwargs: Unpack[SecretReceiverKwargs]) -> SecretReceiver:
+        ...
+
 
 class DefaultManipulators:
     def get_matcher(self, **kwargs: Unpack[CommandMatcherKwargs]) -> CommandMatcher:
@@ -51,6 +55,9 @@ class DefaultManipulators:
 
     def get_mover(self, **kwargs: Unpack[MoverKwargs]) -> Mover:
         return DefaultMover(**kwargs)
+
+    def get_receiver(self, **kwargs: Unpack[SecretReceiverKwargs]) -> SecretReceiver:
+        return DefaultSecretReceiver(**kwargs)
 
 
 class RechargingManipulators(DefaultManipulators):

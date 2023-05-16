@@ -10,6 +10,7 @@ from server.exceptions import (
     CommandKeyIdOutOfRangeError,
     CommandLoginFailError,
     CommandSyntaxError,
+    GetSecretMessageFailed,
     LogicError,
     MoveFailed,
     ServerError,
@@ -65,6 +66,13 @@ class Worker(ABC):
             creator=self.creator,
             logger_=self.logger.getChild("mover"),
         )
+        self.receiver = manipulators.get_receiver(
+            reader=self.reader,
+            writer=self.writer,
+            matcher=self.matcher,
+            creator=self.creator,
+            logger_=self.logger.getChild("secret_receiver"),
+        )
 
     @abstractmethod
     async def do(self) -> None:
@@ -88,7 +96,7 @@ class DefaultWorker(Worker):
             case Err():
                 return
             case Ok():
-                pass
+                await self._get_secret_message()
 
     async def close(self) -> None:
         await self.writer.close()
@@ -113,6 +121,16 @@ class DefaultWorker(Worker):
                 self.logger.info(f"Error while moving: {err=}")
                 await self._process_error(err)
                 return Err(MoveFailed(err))
+
+    async def _get_secret_message(self) -> NoneResult[GetSecretMessageFailed]:
+        match await self.receiver.receive():
+            case Ok():
+                self.logger.info("Successfuly received secret message")
+                return Ok(None)
+            case Err(err):
+                self.logger.info(f"Error while receiving secret message: {err=}")
+                await self._process_error(err)
+                return Err(GetSecretMessageFailed(err))
 
     async def _process_error(self, err: ServerError) -> None:
         match err:
