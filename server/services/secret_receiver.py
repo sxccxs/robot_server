@@ -32,5 +32,5 @@ class DefaultSecretReceiver(SecretReceiver):
                 return err
             case Ok():
                 await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGOUT))
-                self.logger.info("Logout success")
+                self.logger.info("Received successfully")
                 return Ok(None)
