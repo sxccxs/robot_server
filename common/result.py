@@ -18,3 +18,5 @@ class Err(Generic[E]):
 
 
 Result = Ok[T] | Err[E]
+
+NoneResult = Ok[None] | Err[E]

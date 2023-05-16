@@ -4,7 +4,7 @@ from typing import NotRequired, TypedDict
 
 from common.commands import ServerCommand
 from common.data_classes import KeysPair
-from common.result import Err, Ok, Result
+from common.result import Err, NoneResult, Ok
 from server.exceptions import (
     AuthenticationFailed,
     CommandKeyIdOutOfRangeError,
@@ -80,7 +80,7 @@ class DefaultWorker(Worker):
         await self.writer.close()
         self.logger.info(f"Ended worker {self.worker_id}")
 
-    async def _authenticate(self) -> Result[None, AuthenticationFailed]:
+    async def _authenticate(self) -> NoneResult[AuthenticationFailed]:
         match await self.authenticator.authenticate():
             case Ok():
                 self.logger.info(f"worker {self.worker_id}: Authentication success")

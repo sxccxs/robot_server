@@ -9,7 +9,7 @@ from common.result import Err, Ok
 from server.command_handlers.reg_checks import is_int, matches_client_okay
 from server.command_handlers.types import NonValueCommands, NumberCommands, StringCommands
 from server.exceptions import CommandNumberFormatError, CommandSyntaxError
-from server.server_result import ServerResult
+from server.server_result import NoneServerResult, ServerResult
 
 from . import logger as LOGGER_BASE
 
@@ -41,7 +41,7 @@ class CommandMatcher(ABC):
 
     @overload
     @abstractmethod
-    def match(self, cmd: NonValueCommands, data: bytes) -> ServerResult[None]:
+    def match(self, cmd: NonValueCommands, data: bytes) -> NoneServerResult:
         pass
 
     @abstractmethod
