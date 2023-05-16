@@ -5,7 +5,7 @@ from common.commands import ClientCommand, ServerCommand
 from common.data_classes import KeysPair
 from common.result import Err, Ok
 from server.exceptions import CommandKeyIdOutOfRangeError, CommandLoginFailError, CommandNumberFormatError
-from server.server_result import ServerResult
+from server.server_result import NoneServerResult, ServerResult
 from server.services.base_service import BaseService, BaseServiceKwargs
 
 
@@ -18,12 +18,12 @@ class Authenticator(BaseService, ABC):
     keys_dict: dict[int, KeysPair]
 
     @abstractmethod
-    async def authenticate(self) -> ServerResult[None]:
+    async def authenticate(self) -> NoneServerResult:
         pass
 
 
 class DefaultAuthenticator(Authenticator):
-    async def authenticate(self) -> ServerResult[None]:
+    async def authenticate(self) -> NoneServerResult:
         self.logger.debug("Authenticator started")
         match await self._get_username():
             case Ok(value):
@@ -92,7 +92,7 @@ class DefaultAuthenticator(Authenticator):
 
         return Ok(self.keys_dict[key_pair_id])
 
-    async def _get_client_confirmation(self, name_hash: int, client_key: int) -> ServerResult[None]:
+    async def _get_client_confirmation(self, name_hash: int, client_key: int) -> NoneServerResult:
         match await self.reader.read(ClientCommand.CLIENT_CONFIRMATION.max_len_postfix):
             case Ok(value):
                 data = value
