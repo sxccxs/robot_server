@@ -17,7 +17,12 @@ def configure_logging() -> None:
 async def main():
     configure_logging()
 
+    from common.config import HOST, KEYS, PORT
+    from server.manipulators import RechargingManipulators
+    from server.server import Server
 
+    server = Server(HOST, PORT, KEYS, manipulators=RechargingManipulators())
+    await server.run()
 
 
 if __name__ == "__main__":
