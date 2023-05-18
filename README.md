@@ -6,11 +6,30 @@ This is an asynchronous TCP/IP Server implementing communication for automatic c
 
 The implementation of the client is not a part of the project (maybe yet).
 
+## Table of contents
+
+- [Detailed specifications](#detailed-specifications)
+  - [Authentication](#authentication)
+  - [Movement to the target](#movement-to-the-target)
+  - [Picking up a secret message](#picking-up-a-secret-message)
+  - [Recharging](#recharging)
+- [Error situations](#error-situations)
+  - [Authentication errors](#authentication-errors)
+  - [Syntax errors](#syntax-errors)
+  - [Logical errors](#logical-errors)
+  - [Timeout](#timeout)
+- [Special situations](#special-situations)
+- [Server optimization](#server-optimization)
+- [Example of the communication](#example-of-the-communication)
+- [Requirements](#requirements)
+- [Task Reference](#task-reference)
+- [License](#license)
+
 ## Detailed specifications
 
-The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in `config.py` as constant `CMD_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the Special situations section).
+The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in [`config.py`](/common/config.py) as constant `CMD_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the Special situations section).
 
-All command are encoded and decoded with `ENCODING` defined in `config.py` file. Default value is ASCII.
+All command are encoded and decoded with `ENCODING` defined in [`config.py`](/common/config.py) file. Default value is ASCII.
 
 Server messages (showed with default message ending):
 
@@ -40,7 +59,7 @@ Client messages:
 |CLIENT_FULL_POWER |FULL POWER\a\b |The robot has replenished power and is taking commands again. | | 10|
 |CLIENT_MESSAGE |\<text>\a\b |The text of the secret message that was picked up. It can be any sequence of characters except the `CMD_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` messages. | Haf!\a\b| 98|
 
-Time constants (defined in `config.py`):
+Time constants (defined in [`config.py`](/common/config.py)):
 |Name | Default value| Description |
 |-|-|-|
 |TIMEOUT|1|Both the server and the client expect a response from the counterpart for the duration of this interval.|
@@ -48,7 +67,7 @@ Time constants (defined in `config.py`):
 
 ### Authentication
 
-Server and client both know authentication key pairs defined as `KEYS` in `config.py` (Key ID is determined by the order of pairs).
+Server and client both know authentication key pairs defined as `KEYS` in [`config.py`](/common/config.py) (Key ID is determined by the order of pairs).
 Example:
 |Key ID|Server Key|Client Key|
 |-|-|-|
@@ -100,7 +119,7 @@ CLIENT_CONFIRMATION --->
 
 The server does not know the usernames in advance. Therefore, robots can choose any name they want, but they must know the key set of both the client and the server. The key pair ensures two-way authentication while preventing the authentication process from being compromised by simply eavesdropping on the communication.
 
-### Robot movement to the target
+### Movement to the target
 
 The robot can only move straight (`SERVER_MOVE`) and is able to perform a turn in place to the right (`SERVER_TURN_RIGHT`) and to the left (`SERVER_TURN_LEFT`). After each movement command, it sends an acknowledgement (`CLIENT_OK`), which includes the current coordinates. The position of the robot is not known to the server at the beginning of the communication. The server has to find out the position of the robot (position and direction) only from its responses. In order to prevent the robot from wandering endlessly in space, each robot has a limited number of movements (only moving forward). The number of movements should be sufficient to reasonably move the robot to the target. The following is a demonstration of communication. The server first moves the robot forward twice to detect its current state and then guides it towards the target coordinate [0,0].
 
@@ -215,14 +234,14 @@ If there is a Key ID in the `CLIENT_KEY_ID` message that is outside the expected
 
 If there is a numeric value (my be negative) in the `CLIENT_CONFIRMATION` message, excluding `CMD_POSTFIX` that does not match the expected confirmation, the server sends a `SERVER_LOGIN_FAILED` message and terminates the connection. If it is not a numeric value at all, the server sends a `SERVER_SYNTAX_ERROR` message and terminates the connection.
 
-### Syntax error
+### Syntax errors
 
 The server always responds to a syntax error immediately after receiving the message in which it detected the error. The server sends the `SERVER_SYNTAX_ERROR` message to the robot and then must terminate the connection as soon as possible. Syntactically incorrect messages:
 
 - The incoming message is longer than the number of characters defined for each message. Length for every message is defined in the client message summary table.
 - The incoming message does not syntactically match any of the `CLIENT_USERNAME`, `CLIENT_KEY_ID`, `CLIENT_CONFIRMATION`, `CLIENT_OK`, `CLIENT_RECHARGING`, and `CLIENT_FULL_POWER` messages.
 
-### Logical error
+### Logical errors
 
 The logical error occurs only during charging - when the robot sends charging info (`CLIENT_RECHARGING`) and after that sends any other message than `CLIENT_FULL_POWER` or if it sends `CLIENT_FULL_POWER` message without sending `CLIENT_RECHARGING` first. The server responds to such situations by sending a `SERVER_LOGIC_ERROR` message and terminating the connection immediately.
 
@@ -267,3 +286,15 @@ S: "105 GET MESSAGE\a\b"
 C: "Secret message.\a\b"
 S: "106 LOGOUT\a\b"
 ```
+
+## Requirements
+
+- Python 3.11.3 (or higher)
+
+## Task Reference
+
+ČVUT, FIT, BI-PSI, semestral work 2023
+
+## License
+
+[MIT](LICENSE)

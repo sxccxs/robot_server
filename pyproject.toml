@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "An asynchronous TCP/IP Server implementing communication for automatic control of remote robots."
 authors = ["Hryhorii Biloshenko <hryhorii.biloshenko@gmail.com>"]
 readme = "README.md"
-packages = [{include = "robot_server"}]
+license = "MIT"
+repository = "https://github.com/sxccxs/robot_server"
 
 [tool.poetry.dependencies]
 python = "^3.11.3"
