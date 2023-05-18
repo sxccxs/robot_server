@@ -27,7 +27,7 @@ The implementation of the client is not a part of the project (maybe yet).
 
 ## Detailed specifications
 
-The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in [`config.py`](/common/config.py) as constant `CMD_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the Special situations section).
+The communication between the server and the robots is implemented by a fully text-based protocol. Each command is terminated by a pair of special symbols defined in [`config.py`](/common/config.py) as constant `CMD_POSTFIX`. Default value is "\a\b" (these are two characters '\a' and '\b'). The server must follow the communication protocol exactly, but it must take into account the imperfect firmware of the robots (see the [Special situations section](#special-situations)).
 
 All command are encoded and decoded with `ENCODING` defined in [`config.py`](/common/config.py) file. Default value is ASCII.
 
@@ -56,7 +56,7 @@ Client messages:
 |CLIENT_CONFIRMATION |<16-bit number in decimal notation>\a\b | Message with confirmation code. It can contain a maximum of 5 numbers and the termination sequence.| 1009\a\b| 5|
 |CLIENT_OK |OK \<x> \<y>\a\b |Acknowledgement of motion execution, where x and y are the integer coordinates of the robot after executing the motion command. | OK -3 -1\a\b| 10|
 |CLIENT_RECHARGING |RECHARGING\a\b |The robot started to recharge and stopped responding to messages. | | 10|
-|CLIENT_FULL_POWER |FULL POWER\a\b |The robot has replenished power and is taking commands again. | | 10|
+|CLIENT_FULL_POWER |FULL POWER\a\b |The robot has recharged and is taking commands again. | | 10|
 |CLIENT_MESSAGE |\<text>\a\b |The text of the secret message that was picked up. It can be any sequence of characters except the `CMD_POSTFIX` and will never be identical to the contents of the `CLIENT_RECHARGING` or `CLIENT_FULL_POWER` messages. | Haf!\a\b| 98|
 
 Time constants (defined in [`config.py`](/common/config.py)):
@@ -80,7 +80,7 @@ Example:
 Each robot starts communication by sending its username (`CLIENT_USERNAME` message). In the next step, the server prompts the client to send the Key ID (`SERVER_KEY_REQUEST` message), which is actually the identifier of the key pair it wants to use for authentication. The client responds with a `CLIENT_KEY_ID` message, in which it sends the Key ID. After that, the server knows the correct key pair so it can compute a "hash" code from the username using the following formula:
 
 ```
-Username.
+Username: Mnau!
 
 ASCII representation: 77 110 97 117 33
 
@@ -121,20 +121,15 @@ The server does not know the usernames in advance. Therefore, robots can choose 
 
 ### Movement to the target
 
-The robot can only move straight (`SERVER_MOVE`) and is able to perform a turn in place to the right (`SERVER_TURN_RIGHT`) and to the left (`SERVER_TURN_LEFT`). After each movement command, it sends an acknowledgement (`CLIENT_OK`), which includes the current coordinates. The position of the robot is not known to the server at the beginning of the communication. The server has to find out the position of the robot (position and direction) only from its responses. In order to prevent the robot from wandering endlessly in space, each robot has a limited number of movements (only moving forward). The number of movements should be sufficient to reasonably move the robot to the target. The following is a demonstration of communication. The server first moves the robot forward twice to detect its current state and then guides it towards the target coordinate [0,0].
+The robot can only move straight (`SERVER_MOVE`) and is able to perform a turn in place to the right (`SERVER_TURN_RIGHT`) and to the left (`SERVER_TURN_LEFT`). After each movement command, it sends an acknowledgement (`CLIENT_OK`), which includes the current coordinates.
+
+The position of the robot is not known to the server at the beginning of the communication. The server has to find out the position of the robot (position and direction) only from its responses.
+
+In order to prevent the robot from wandering endlessly in space, each robot has a limited number of movements (only moving forward). The number of movements should be sufficient to reasonably move the robot to the target.
 
 Not the most efficient movement algorithm is used at the moment.
 
-Just after authentication, the robot expects at least one motion command - `SERVER_MOVE`, `SERVER_TURN_LEFT` or `SERVER_TURN_RIGHT`. You cannot try to pick up the secret right away. There are many obstacles along the way that robots must overcome by detouring. The following rules apply to the obstacles:
-
-- An obstacle always occupies a single coordinate.
-- It is guaranteed that each obstacle has all eight surrounding coordinates free (i.e., it can always be easily bypassed).
-- It is guaranteed that an obstacle never occupies the coordinate [0,0].
-- If the robot hits an obstacle more than 20 times, it will be damaged and terminate the connection.
-
-The obstacle is detected so that the robot is instructed to move forward (`SERVER_MOVE`), but no coordinate change occurs (the `CLIENT_OK` message contains the same coordinates as in the previous step). If the move is not executed, there is no subtraction from the number of remaining robot steps.
-
-Example of communication:
+The following is a demonstration of communication:
 
 ```
 Client                  Server
@@ -163,6 +158,17 @@ CLIENT_OK --->
                   .
                   .
 ```
+
+Just after authentication, the robot expects at least one motion command - `SERVER_MOVE`, `SERVER_TURN_LEFT` or `SERVER_TURN_RIGHT`. You cannot try to pick up the secret right away. There are many obstacles along the way that robots must overcome by detouring. The following rules apply to the obstacles:
+
+- An obstacle always occupies a single coordinate.
+- It is guaranteed that each obstacle has all eight surrounding coordinates free (i.e., it can always be easily bypassed).
+- It is guaranteed that an obstacle never occupies the coordinate [0,0].
+- If the robot hits an obstacle more than 20 times, it will be damaged and terminate the connection.
+
+The obstacle is detected so that the robot is instructed to move forward (`SERVER_MOVE`), but no coordinate change occurs (the `CLIENT_OK` message contains the same coordinates as in the previous step). If the move is not executed, there is no subtraction from the number of remaining robot steps.
+
+Example of communication:
 
 ### Picking up a secret message
 
@@ -230,9 +236,9 @@ Some robots may have corrupted firmware and so may not communicate properly. The
 
 ### Authentication errors
 
-If there is a Key ID in the `CLIENT_KEY_ID` message that is outside the expected range, the server responds with a `SERVER_KEY_OUT_OF_RANGE_ERROR` error message and terminates the connection. Negative values are also considered a number. If there is not only number, excluding `CMD_POSTFIX`, in the `CLIENT_KEY_ID` message, the server responds with a `SERVER_SYNTAX_ERROR` error.
+If there is a Key ID in the `CLIENT_KEY_ID` message that is not in expected range, the server responds with a `SERVER_KEY_OUT_OF_RANGE_ERROR` error message and terminates the connection. Negative values are also considered a number. If there is not only number, excluding `CMD_POSTFIX`, in the `CLIENT_KEY_ID` message, the server responds with a `SERVER_SYNTAX_ERROR` error.
 
-If there is a numeric value (my be negative) in the `CLIENT_CONFIRMATION` message, excluding `CMD_POSTFIX` that does not match the expected confirmation, the server sends a `SERVER_LOGIN_FAILED` message and terminates the connection. If it is not a numeric value at all, the server sends a `SERVER_SYNTAX_ERROR` message and terminates the connection.
+If there is a numeric value (my be negative) in the `CLIENT_CONFIRMATION` message, excluding `CMD_POSTFIX` that does not match the expected confirmation, the server sends a `SERVER_LOGIN_FAILED` message and terminates the connection. If it is not an only numeric value, the server sends a `SERVER_SYNTAX_ERROR` message and terminates the connection.
 
 ### Syntax errors
 
@@ -243,7 +249,7 @@ The server always responds to a syntax error immediately after receiving the mes
 
 ### Logical errors
 
-The logical error occurs only during charging - when the robot sends charging info (`CLIENT_RECHARGING`) and after that sends any other message than `CLIENT_FULL_POWER` or if it sends `CLIENT_FULL_POWER` message without sending `CLIENT_RECHARGING` first. The server responds to such situations by sending a `SERVER_LOGIC_ERROR` message and terminating the connection immediately.
+The logical error occurs only during recharging - when the robot sends recharging message (`CLIENT_RECHARGING`) and after that sends any other message than `CLIENT_FULL_POWER` or if it sends `CLIENT_FULL_POWER` message without sending `CLIENT_RECHARGING` first. The server responds to such situations by sending a `SERVER_LOGIC_ERROR` message and terminating the connection immediately.
 
 ### Timeout
 
@@ -261,7 +267,7 @@ When communicating over a more complicated network infrastructure, two situation
 
 ## Server optimization
 
-The server optimizes the protocol by not waiting for the completion of a message that is obviously bad. For example, when prompted for authentication, the robot sends only the username portion of the message. For example, the server receives 22 characters of the username, but still has not received the `CMD_POSTFIX` termination sequence. Since the maximum message length is 20 characters (with `CMD_POSTFIX`), it is clear that the received message cannot be valid. The server therefore responds by not waiting for the rest of the message, but sends a `SERVER_SYNTAX_ERROR` message and terminates the connection. In principle, it should do the same when retrieving a secret message.
+The server optimizes the protocol by not waiting for the completion of a message that is obviously bad. For example, when prompted for authentication, the robot sends only the username portion of the message. For example, the server receives 22 characters of the username, but still has not received the `CMD_POSTFIX` termination sequence. Since the maximum message length is 20 characters (with default `CMD_POSTFIX`), it is clear that the received message cannot be valid. The server therefore responds by not waiting for the rest of the message, but sends a `SERVER_SYNTAX_ERROR` message and terminates the connection. In principle, it should do the same when retrieving a secret message.
 
 ## Example of the communication
 
