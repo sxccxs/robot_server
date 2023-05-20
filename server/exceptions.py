@@ -1,16 +1,20 @@
-class AuthenticationFailed(Exception):
+class BaseServerError(Exception):
     pass
 
 
-class MoveFailed(Exception):
+class AuthenticationFailed(BaseServerError):
     pass
 
 
-class GetSecretMessageFailed(Exception):
+class MoveFailed(BaseServerError):
     pass
 
 
-class ServerError(Exception):
+class GetSecretMessageFailed(BaseServerError):
+    pass
+
+
+class ServerError(BaseServerError):
     pass
 
 
