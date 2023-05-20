@@ -1,4 +1,4 @@
-from enum import Enum, StrEnum, auto
+from enum import Enum
 
 from common.config import CMD_POSTFIX
 
@@ -7,9 +7,9 @@ class TextLength:
     __slots__ = ("cmd_text", "max_len", "max_len_postfix")
 
     def __init__(self, val: int | str) -> None:
-        self.cmd_text = val if isinstance(val, str) else None
-        self.max_len = val if isinstance(val, int) else len(self.cmd_text)  # type: ignore
-        self.max_len_postfix = self.max_len + len(CMD_POSTFIX)
+        self.cmd_text: str = val if isinstance(val, str) else ""
+        self.max_len: int = val if isinstance(val, int) else len(self.cmd_text)  # type: ignore
+        self.max_len_postfix: int = self.max_len + len(CMD_POSTFIX)
 
 
 class ClientCommand(TextLength, Enum):
@@ -22,8 +22,8 @@ class ClientCommand(TextLength, Enum):
     CLIENT_MESSAGE = 98
 
 
-class ServerCommand(StrEnum):
-    SERVER_CONFIRMATION = auto()
+class ServerCommand(TextLength, Enum):
+    SERVER_CONFIRMATION = 5
     SERVER_MOVE = "102 MOVE"
     SERVER_TURN_LEFT = "103 TURN LEFT"
     SERVER_TURN_RIGHT = "104 TURN RIGHT"
