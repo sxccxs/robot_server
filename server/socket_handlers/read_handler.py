@@ -91,10 +91,13 @@ class Split2BytesReadHandler(ReadHandler):
         """Gets message from queue until separator or until the queue ends"""
         msg_stream = BytesIO()
         separator_spliter = self._get_separator_spliter(sep)
+
         while self._msg_queue:
             next_chunk = self._msg_queue[0]
             part_of_current, part_of_next = separator_spliter(next_chunk)
+
             msg_stream.write(part_of_current)
+
             if part_of_next is not None:
                 if part_of_next:  # separator end is in between of the chunk
                     self._msg_queue[0] = part_of_next
