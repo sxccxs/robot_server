@@ -105,7 +105,7 @@ class DefaultWorker(Worker):
     async def _authenticate(self) -> NoneResult[AuthenticationFailed]:
         match await self.authenticator.authenticate():
             case Ok():
-                self.logger.info(f"worker {self.worker_id}: Authentication success")
+                self.logger.info(f"Authenticated successfully")
                 return Ok(None)
             case Err(err):
                 self.logger.info(f"Error while authenticating: {err=}")
@@ -115,7 +115,7 @@ class DefaultWorker(Worker):
     async def _move_to_start(self) -> NoneResult[MoveFailed]:
         match await self.mover.move_to_start():
             case Ok():
-                self.logger.info("Successfuly moved to coordinates (0,0)")
+                self.logger.info("Successfully moved to coordinates (0,0)")
                 return Ok(None)
             case Err(err):
                 self.logger.info(f"Error while moving: {err=}")
@@ -125,7 +125,7 @@ class DefaultWorker(Worker):
     async def _get_secret_message(self) -> NoneResult[GetSecretMessageFailed]:
         match await self.receiver.receive():
             case Ok():
-                self.logger.info("Successfuly received secret message")
+                self.logger.info("Successfully received secret message")
                 return Ok(None)
             case Err(err):
                 self.logger.info(f"Error while receiving secret message: {err=}")

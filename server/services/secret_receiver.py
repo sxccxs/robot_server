@@ -22,13 +22,13 @@ class DefaultSecretReceiver(SecretReceiver):
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_PICK_UP))
         match await self.reader.read(ClientCommand.CLIENT_MESSAGE.max_len_postfix):
             case Err() as err:
-                self.logger.error(f"Error in secret receiving: {err=}")
+                self.logger.info(f"Error in secret receiving: {err=}")
                 return err
             case Ok(data):
                 pass
         match self.matcher.match(ClientCommand.CLIENT_MESSAGE, data):
             case Err() as err:
-                self.logger.error(f"Error in secret receiving: {err=}")
+                self.logger.info(f"Error in secret receiving: {err=}")
                 return err
             case Ok():
                 await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGOUT))
