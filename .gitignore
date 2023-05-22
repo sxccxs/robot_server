@@ -1,5 +1,5 @@
 client/
-*.log
+logs/
 run_client.py
 .vscode/
 todo.md
