@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from asyncio import StreamReader, StreamWriter
-from typing import NotRequired, TypedDict
+from traceback import format_tb
+from types import TracebackType
+from typing import NotRequired, Self, TypedDict
 
 from common.commands import ServerCommand
 from common.data_classes import KeysPair
@@ -81,6 +83,17 @@ class Worker(ABC):
     @abstractmethod
     async def close(self) -> None:
         ...
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+    ) -> None:
+        await self.close()
+        if exc_val is not None:
+            self.logger.critical(f"Unexpected error happend: type={exc_type},  value={exc_val}")
+            self.logger.critical(f"Traceback: {format_tb(exc_tb)}")
 
 
 class DefaultWorker(Worker):
