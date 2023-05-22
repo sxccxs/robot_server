@@ -15,25 +15,38 @@ stream = "ext://sys.stdout"
 [handlers.debug_file]
 level = "DEBUG"
 formatter = "standard"
-class = "logging.FileHandler"
-filename = "./debug_log.log"
-mode = "w"
+class = "logging.handlers.RotatingFileHandler"
+filename = "./logs/debug_log.log"
+mode = "a"
+maxBytes = 1048576
+backupCount = 2
 
 [handlers.file]
 level = "INFO"
 formatter = "standard"
-class = "logging.FileHandler"
-filename = "./log.log"
-mode = "w"
+class = "logging.handlers.RotatingFileHandler"
+filename = "./logs/log.log"
+mode = "a"
+maxBytes = 102400
+backupCount = 10
+
+[handlers.error]
+level = "ERROR"
+formatter = "standard"
+class = "logging.handlers.RotatingFileHandler"
+filename = "./logs/error.log"
+mode = "a"
+maxBytes = 102400
+backupCount = 10
 
 [loggers]
 [loggers.__main__]
-handlers = ["file", "debug_file"]
+handlers = ["file", "debug_file", "error"]
 level = "DEBUG"
 propagate = false
 
 [loggers.server]
-handlers = ["file", "debug_file"]
+handlers = ["file", "debug_file", "error"]
 level = "DEBUG"
 propagate = false
 
