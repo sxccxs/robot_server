@@ -24,6 +24,9 @@ class DefaultMover(Mover):
         self.logger.debug("Started mover")
         try:
             orientation = await self._get_orientation()
+            self.logger.info(
+                f"Starting position: {orientation.coords}, starting orientation: {orientation.side.name}"
+            )
             await self._move_to_0(orientation, Axis.X)
             await self._move_to_0(orientation, Axis.Y)
         except ServerError as err:
@@ -39,7 +42,7 @@ class DefaultMover(Mover):
             orient (Orientation): orientation object determening current position
             axis (Axis): axis to move along
         """
-        self.logger.debug("Started moving to 0")
+        self.logger.info(f"Started moving to 0 by axis {axis.name}")
         if axis == Axis.X:
             move_side = Side.LEFT if orient.coords.x > 0 else Side.RIGHT
         else:
@@ -59,7 +62,7 @@ class DefaultMover(Mover):
             else:
                 orient.coords = new_pos
             self.logger.debug(f"Moved to {orient.coords}")
-        self.logger.debug(f"Moving done. Moved to new coords: {orient.coords}")
+        self.logger.info(f"Moving done. Moved to new coords: {orient.coords}")
 
     async def _switch_axis(self, x_coord: int) -> Coords:
         turns = (self._turn_right, self._turn_left) if x_coord < 0 else (self._turn_left, self._turn_right)

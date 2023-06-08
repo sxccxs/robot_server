@@ -1,7 +1,8 @@
 client/
-*.log
+logs/
 run_client.py
 .vscode/
+todo.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

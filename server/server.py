@@ -48,10 +48,6 @@ class Server:
         )
         self.next_worker_id += 1
         logger.info(f"Created new connection {worker.worker_id}")
-        try:
+        async with worker:
             await worker.do()
-        except Exception as ex:
-            logger.error(f"Unexpected exception happend in worker {worker.worker_id}: {ex=}")
-        else:
-            await worker.close()
         logger.info(f"Connection {worker.worker_id} closed")

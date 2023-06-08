@@ -42,5 +42,5 @@ class DefaultCommandCreator(CommandCreator):
                 cmd_text = str(confirmation_number)
             case _:
                 self.logger.debug(f"Created {cmd.name} cmd")
-                cmd_text = cmd.value
+                cmd_text = cmd.cmd_text
         return cmd_text.encode(ENCODING)

@@ -67,7 +67,7 @@ Time constants (defined in [`config.py`](/common/config.py)):
 
 ### Authentication
 
-Server and client both know authentication key pairs defined as `KEYS` in [`config.py`](/common/config.py) (Key ID is determined by the order of pairs).
+Server and client both know authentication key pairs defined as `KEYS` in [`config.py`](/common/config.py) (Key ID is determined by the order of pairs). Each pair can be used by multiple connections simultaneously.
 Example:
 |Key ID|Server Key|Client Key|
 |-|-|-|
