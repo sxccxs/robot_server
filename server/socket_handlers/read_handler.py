@@ -144,23 +144,23 @@ class AnyLengthSepReadHandler(ReadHandler):
 
         _matched_bytes: list[bool]
 
-        def __init__(self, begging_value: bytes | None = None):
+        def __init__(self, beginning_value: bytes | None = None):
             """Initializes SeparatorSplitter.
 
             Args:
-                begging_value (bytes | None, optional): The beggining value of the read,
+                beginning_value (bytes | None, optional): The beginning value of the read,
                 which may end with part of CMD_POSTFIX_B. Defaults to None.
             """
             self._matched_bytes: list[bool] = self._create_matched_empty()
 
-            if begging_value:
+            if beginning_value:
                 for i in range(len(CMD_POSTFIX_B), 0, -1):
-                    if begging_value[-i:] == CMD_POSTFIX_B[:i]:
+                    if beginning_value[-i:] == CMD_POSTFIX_B[:i]:
                         self._matched_bytes[:i] = [True] * i
                         break
 
         def _create_matched_empty(self) -> list[bool]:
-            """Creates list of _matched_bytes beggining value.
+            """Creates list of _matched_bytes beginning value.
 
             Returns:
                 list[bool]: List of False of length len(CMD_POSTFIX_B).
