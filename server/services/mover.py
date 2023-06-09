@@ -19,9 +19,20 @@ class MoverKwargs(BaseServiceKwargs):
 class Mover(BaseService, ABC):
     @abstractmethod
     async def move_to_start(self) -> NoneServerResult:
+        """Moves robot to coordinates (0,0).
+
+        Returns:
+            NoneServerResult: Ok if moved successfully, else Err.
+        """
         pass
 
     async def _rotate_to(self, orient: Orientation, to_side: Side) -> None:
+        """Rotates to provided side. Changes orient object.
+
+        Args:
+            orient (Orientation): Current orientation.
+            to_side (Side): Side to turn to.
+        """
         if orient.side == to_side:
             return
 
@@ -55,22 +66,53 @@ class Mover(BaseService, ABC):
         return Orientation(new_pos, side)
 
     async def _make_move(self) -> Coords:
+        """Sends make move command and gets a response.
+
+        Returns:
+            Coords: Coords after move.
+        """
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_MOVE))
         return await self._get_ok_response()
 
     async def _turn_right(self, orient: Orientation | None = None) -> Coords:
+        """Sends turn right, turn orient object and gets a response.
+
+        Args:
+            orient (Orientation | None, optional): Orientation object which will be turned right if provided.
+            Defaults to None.
+
+        Returns:
+            Coords: Coordinates after turn.
+        """
         if orient is not None:
             orient.turn_right()
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_TURN_RIGHT))
         return await self._get_ok_response()
 
     async def _turn_left(self, orient: Orientation | None = None) -> Coords:
+        """Sends turn left, turn orient object and gets a response.
+
+        Args:
+            orient (Orientation | None, optional): Orientation object which will be turned left if provided.
+            Defaults to None.
+
+        Returns:
+            Coords: Coordinates after turn.
+        """
         if orient is not None:
             orient.turn_left()
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_TURN_LEFT))
         return await self._get_ok_response()
 
     async def _get_ok_response(self) -> Coords:
+        """Gets robot's response to any of the moving commands.
+
+        Raises:
+            ServerError: Throws some subclass if something goes wrong while receiving response.
+
+        Returns:
+            Coords: Coordinates received from robot.
+        """
         match await self.reader.read(ClientCommand.CLIENT_OK.max_len_postfix):
             case Err(err):
                 raise err
@@ -176,6 +218,11 @@ class BFSMover(Mover):
         return Ok(None)
 
     async def _move_to_center(self, orientation: Orientation) -> None:
+        """Moves robot with given orientation to the center using bfs algorithm.
+
+        Args:
+            orientation (Orientation): Robot's orientation at the beginning.
+        """
         if orientation.coords == Coords(0, 0):
             return
         obstacles = set[Coords]()
@@ -185,21 +232,30 @@ class BFSMover(Mover):
         while path_queue:
             if orientation.coords == Coords(0, 0):
                 return
-            cur = path_queue.popleft()
-            needed_side = Side.determine_side(orientation.coords, cur)
+            next_coords = path_queue.popleft()
+            needed_side = Side.determine_side(orientation.coords, next_coords)
             await self._rotate_to(orientation, needed_side)
             new_coords = await self._make_move()
             if orientation.coords == new_coords:
-                obstacles.add(cur)
+                obstacles.add(next_coords)
                 path_queue = self._bfs(orientation.coords, obstacles)
-                self.logger.debug(f"Obstacle found at {orientation.coords}. New planed way: {path_queue}")
-                path_queue.popleft()
+                self.logger.debug(f"Obstacle found at {next_coords}. New planed way: {path_queue}")
+                path_queue.popleft()  # remove current Coords from path
             else:
                 orientation.coords = new_coords
 
         self.logger.info("Achieved (0,0).")
 
     def _bfs(self, start: Coords, obstacles: set[Coords]) -> deque[Coords]:
+        """BFS algorithm implementation to search for a way to (0,0).
+
+        Args:
+            start (Coords): Beginning position.
+            obstacles (set[Coords]): Set of coordinates, which are not reachable.
+
+        Returns:
+            deque[Coords]: Path from start to (0,0) stored as a deque.
+        """
         backtrack = dict[Coords, Coords]()
         visited = set[Coords]()
         queue: deque[Coords] = deque()
