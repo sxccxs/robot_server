@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import deque
 from functools import partial
 
 from typing_extensions import override
@@ -153,5 +154,80 @@ class DefaultMover(Mover):
         return await self._turn_right()
 
 
+class BFSMover(Mover):
+    @override
+    async def move_to_start(self) -> NoneServerResult:
+        self.logger.debug("Started mover")
+        try:
+            match await self._get_orientation():
+                case None:
+                    self.logger.info("Moved to (0,0).")
+                    return Ok(None)
+                case Orientation() as orientation:
+                    pass
+            self.logger.info(
+                f"Starting position: {orientation.coords}, starting orientation: {orientation.side.name}"
+            )
+            await self._move_to_center(orientation)
+        except ServerError as err:
+            self.logger.info("Error while moving")
+            return Err(err)
 
+        return Ok(None)
 
+    async def _move_to_center(self, orientation: Orientation) -> None:
+        if orientation.coords == Coords(0, 0):
+            return
+        obstacles = set[Coords]()
+        path_queue = self._bfs(orientation.coords, obstacles)
+        self.logger.debug(f"Planed way: {path_queue}")
+        path_queue.popleft()  # remove current Coords from path
+        while path_queue:
+            if orientation.coords == Coords(0, 0):
+                return
+            cur = path_queue.popleft()
+            needed_side = Side.determine_side(orientation.coords, cur)
+            await self._rotate_to(orientation, needed_side)
+            new_coords = await self._make_move()
+            if orientation.coords == new_coords:
+                obstacles.add(cur)
+                path_queue = self._bfs(orientation.coords, obstacles)
+                self.logger.debug(f"Obstacle found at {orientation.coords}. New planed way: {path_queue}")
+                path_queue.popleft()
+            else:
+                orientation.coords = new_coords
+
+        self.logger.info("Achieved (0,0).")
+
+    def _bfs(self, start: Coords, obstacles: set[Coords]) -> deque[Coords]:
+        backtrack = dict[Coords, Coords]()
+        visited = set[Coords]()
+        queue: deque[Coords] = deque()
+        queue.append(start)
+        while queue:
+            current = queue.popleft()
+            if current == Coords(0, 0):
+                break
+
+            if current in visited or current in obstacles:
+                continue
+
+            visited.add(current)
+            neighbours = (
+                Coords(current.x - 1, current.y),
+                Coords(current.x + 1, current.y),
+                Coords(current.x, current.y - 1),
+                Coords(current.x, current.y + 1),
+            )
+            for n in neighbours:
+                if n not in visited:
+                    queue.append(n)
+                    backtrack[n] = current
+
+        path = deque[Coords]()
+        path.append(Coords(0, 0))
+        while path[-1] != start:
+            path.append(backtrack[path[-1]])
+        path.reverse()
+
+        return path
