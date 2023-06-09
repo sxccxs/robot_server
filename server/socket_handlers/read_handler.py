@@ -78,7 +78,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             self.logger.debug(f"recieved data: {chunk}")
 
             part_of_current, part_of_next = separator_spliter.check(chunk)
-            print(part_of_current, part_of_next)
+
             length += len(part_of_current)
             msg_stream.write(part_of_current)
 
