@@ -4,6 +4,8 @@ from traceback import format_tb
 from types import TracebackType
 from typing import NotRequired, Self, TypedDict
 
+from typing_extensions import override
+
 from common.commands import ServerCommand
 from common.data_classes import KeysPair
 from common.result import Err, NoneResult, Ok
@@ -97,6 +99,7 @@ class Worker(ABC):
 
 
 class DefaultWorker(Worker):
+    @override
     async def do(self) -> None:
         self.logger.info(f"Started new worker {self.worker_id}")
         match await self._authenticate():
@@ -111,6 +114,7 @@ class DefaultWorker(Worker):
             case Ok():
                 await self._get_secret_message()
 
+    @override
     async def close(self) -> None:
         await self.writer.close()
         self.logger.info(f"Ended worker {self.worker_id}")

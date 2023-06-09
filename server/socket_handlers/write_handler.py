@@ -4,6 +4,8 @@ from dataclasses import KW_ONLY, dataclass
 from logging import Logger
 from typing import Required, TypedDict
 
+from typing_extensions import override
+
 from common.config import CMD_POSTFIX_B
 from server.command_handlers.command_creator import CommandCreator
 
@@ -40,6 +42,7 @@ class WriteHandler(ABC):
 
 
 class DefaultWriteHandler(WriteHandler):
+    @override
     async def write(self, data: bytes) -> None:
         self.logger.debug(f"Recieved data: {data}")
 

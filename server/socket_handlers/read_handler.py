@@ -6,6 +6,8 @@ from io import BytesIO
 from logging import Logger
 from typing import Required, TypedDict
 
+from typing_extensions import override
+
 from common.commands import ClientCommand
 from common.config import CMD_POSTFIX_B, TIMEOUT, TIMEOUT_RECHARGING
 from common.result import Err, Ok
@@ -53,6 +55,7 @@ class ReadHandler(ABC):
 class AnyLengthSepReadHandler(ReadHandler):
     """Read handler which can process messages with any CMD_POSTFIX_B length."""
 
+    @override
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
         self.logger.debug("started read")
 
@@ -219,6 +222,7 @@ class RechargingReadHandler(ReadHandler):
             self.reader, self.matcher, logger=self.logger, _chunk_size=self._chunk_size
         )
 
+    @override
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
         read_length = max(max_len, ClientCommand.CLIENT_RECHARGING.max_len_postfix)  # for correct recharging read
         match await self._subreader.read(read_length, timeout=timeout):

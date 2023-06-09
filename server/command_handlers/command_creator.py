@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from logging import Logger
 from typing import Literal, NotRequired, TypedDict, overload
 
+from typing_extensions import override
+
 from common.commands import ServerCommand
 from common.config import ENCODING
 from server.command_handlers.types import ServerCommandWithoutArgument
@@ -35,6 +37,7 @@ class CommandCreator(ABC):
 
 
 class DefaultCommandCreator(CommandCreator):
+    @override
     def create_message(self, cmd: ServerCommand, confirmation_number: int | None = None) -> bytes:
         match cmd:
             case ServerCommand.SERVER_CONFIRMATION:

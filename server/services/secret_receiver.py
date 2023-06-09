@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from typing_extensions import override
+
 from common.commands import ClientCommand, ServerCommand
 from common.result import Err, Ok
 from server.server_result import NoneServerResult
@@ -18,6 +20,7 @@ class SecretReceiver(BaseService, ABC):
 
 
 class DefaultSecretReceiver(SecretReceiver):
+    @override
     async def receive(self) -> NoneServerResult:
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_PICK_UP))
         match await self.reader.read(ClientCommand.CLIENT_MESSAGE.max_len_postfix):

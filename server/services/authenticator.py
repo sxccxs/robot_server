@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from typing_extensions import override
+
 from common.commands import ClientCommand, ServerCommand
 from common.data_classes import KeysPair
 from common.result import Err, Ok
@@ -23,6 +25,7 @@ class Authenticator(BaseService, ABC):
 
 
 class DefaultAuthenticator(Authenticator):
+    @override
     async def authenticate(self) -> NoneServerResult:
         self.logger.debug("Authenticator started")
         match await self._get_username():

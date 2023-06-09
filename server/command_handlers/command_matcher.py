@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from logging import Logger
 from typing import Literal, NotRequired, TypedDict, overload
 
+from typing_extensions import override
+
 from common.commands import ClientCommand
 from common.config import CMD_POSTFIX_B, ENCODING
 from common.data_classes import Coords
@@ -50,6 +52,7 @@ class CommandMatcher(ABC):
 
 
 class DefaultCommandMatcher(CommandMatcher):
+    @override
     def match(self, cmd: ClientCommand, data: bytes) -> ServerResult[str | int | Coords | None]:
         self.logger.debug(f"Got data in Matcher {data=}")
 
