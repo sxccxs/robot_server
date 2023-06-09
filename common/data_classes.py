@@ -4,21 +4,29 @@ from typing import NamedTuple, Self
 
 
 class KeysPair(NamedTuple):
+    """Named tuple representing key pair used for authentication."""
+
     server_key: int
     client_key: int
 
 
 class Coords(NamedTuple):
+    """Named tuple of coordinates."""
+
     x: int
     y: int
 
 
 class Axis(Enum):
+    """Enum of axes."""
+
     X = auto()
     Y = auto()
 
 
 class Side(IntEnum):
+    """Enum of sides representing where robot is oriented."""
+
     UP = 0
     RIGHT = 1
     DOWN = 2
@@ -50,11 +58,20 @@ class Side(IntEnum):
 
 @dataclass(slots=True)
 class Orientation:
+    """Class of robot state. Stores it's coordinates and side it is oriented.
+
+    Args:
+        coords (Coords): Robot's current coordinates.
+        side (Side): Where robot looks right now.
+    """
+
     coords: Coords
     side: Side
 
     def turn_left(self) -> None:
+        """Turns side to the left."""
         self.side = Side((self.side - 1) % 4)
 
     def turn_right(self) -> None:
+        """Turns side to the right."""
         self.side = Side((self.side + 1) % 4)

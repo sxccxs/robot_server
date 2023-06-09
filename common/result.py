@@ -7,16 +7,32 @@ E = TypeVar("E", bound=Exception)
 
 @dataclass(frozen=True, slots=True)
 class Ok(Generic[T]):
+    """Class of successful result.
+
+    Args:
+        T: Any type.
+        value (T): Value of the successful result.
+    """
+
     value: T
     __match_args__ = ("value",)
 
 
 @dataclass(frozen=True, slots=True)
 class Err(Generic[E]):
+    """Class of errored result.
+
+    Args:
+        E: subclass of Exception.
+        error: Error describing failed result.
+    """
+
     error: E
     __match_args__ = ("error",)
 
 
 Result = Ok[T] | Err[E]
+"""Result type which is either successful(Ok) or errored(Err)."""
 
 NoneResult = Ok[None] | Err[E]
+"""Result type with non value."""

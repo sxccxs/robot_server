@@ -4,15 +4,27 @@ from common.config import CMD_POSTFIX
 
 
 class TextLength:
+    """Object to represent a command. Created either from given length or given message text.
+    Also calculates length of the message with postfix.
+    """
+
     __slots__ = ("cmd_text", "max_len", "max_len_postfix")
 
     def __init__(self, val: int | str) -> None:
+        """Initializes TextLength object. If string is given, lengthes are calculated from it,
+        if length (without CMD_POSTFIX_B) if given, cmd_text is an empty string.
+
+        Args:
+            val (int | str): Command text or command length.
+        """
         self.cmd_text: str = val if isinstance(val, str) else ""
-        self.max_len: int = val if isinstance(val, int) else len(self.cmd_text)  # type: ignore
+        self.max_len: int = val if isinstance(val, int) else len(self.cmd_text)
         self.max_len_postfix: int = self.max_len + len(CMD_POSTFIX)
 
 
 class ClientCommand(TextLength, Enum):
+    """Enum of robot commands."""
+
     CLIENT_USERNAME = 18
     CLIENT_KEY_ID = 3
     CLIENT_CONFIRMATION = 5
@@ -23,6 +35,8 @@ class ClientCommand(TextLength, Enum):
 
 
 class ServerCommand(TextLength, Enum):
+    """Enum of server commands."""
+
     SERVER_CONFIRMATION = 5
     SERVER_MOVE = "102 MOVE"
     SERVER_TURN_LEFT = "103 TURN LEFT"
