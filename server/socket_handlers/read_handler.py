@@ -36,10 +36,22 @@ class ReadHandler(ABC):
 
     @abstractmethod
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
+        """Reads message of given maximum length ended with CMD_POSTFIX_B.
+
+        Args:
+            max_len (int): Max length of the message including CMD_POSTFIX_B.
+            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+
+        Returns:
+            ServerResult[bytes]: Ok(message) if read was successful,
+            message has correct length and ends with CMD_POSTFIX_B,
+            else Err.
+        """
         pass
 
 
 class AnyLengthSepReadHandler(ReadHandler):
+    """Read handler which can process messages with any CMD_POSTFIX_B length."""
 
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
         self.logger.debug("started read")
@@ -82,6 +94,14 @@ class AnyLengthSepReadHandler(ReadHandler):
         return Ok(res)
 
     async def _read_chunk(self, timeout: int) -> ServerResult[bytes]:
+        """Reads chunk with given timeout.
+
+        Args:
+            timeout (int): Timeout of read.
+
+        Returns:
+            ServerResult[bytes]: Ok(chunk) if read was successful, else Err(ServerTimeoutError).
+        """
         try:
             chunk = await asyncio.wait_for(self.reader.read(self._chunk_size), timeout=timeout)
         except (TimeoutError, ConnectionResetError):
@@ -93,6 +113,11 @@ class AnyLengthSepReadHandler(ReadHandler):
         return Ok(chunk)
 
     def _get_from_queue(self) -> bytes:
+        """Reads from the message queue until CMD_POSTFIX_B found or until queue is empty.
+
+        Returns:
+            bytes: Part of/full message received from queue. If queue was empty, returns empty bytes.
+        """
         msg_stream = BytesIO()
         separator_spliter = self.SeparatorSplitter()
 
@@ -115,10 +140,17 @@ class AnyLengthSepReadHandler(ReadHandler):
 
     @dataclass(init=False, slots=True)
     class SeparatorSplitter:
+        """Object that splits chunks by CMD_POSTFIX_B."""
+
         _matched_bytes: list[bool]
 
         def __init__(self, begging_value: bytes | None = None):
+            """Initializes SeparatorSplitter.
 
+            Args:
+                begging_value (bytes | None, optional): The beggining value of the read,
+                which may end with part of CMD_POSTFIX_B. Defaults to None.
+            """
             self._matched_bytes: list[bool] = self._create_matched_empty()
 
             if begging_value:
@@ -128,9 +160,25 @@ class AnyLengthSepReadHandler(ReadHandler):
                         break
 
         def _create_matched_empty(self) -> list[bool]:
+            """Creates list of _matched_bytes beggining value.
+
+            Returns:
+                list[bool]: List of False of length len(CMD_POSTFIX_B).
+            """
             return [False] * len(CMD_POSTFIX_B)
 
         def check(self, chunk: bytes) -> tuple[bytes, bytes | None]:
+            """Checks given chunck for occurrence of CMD_POSTFIX_B.
+            If found, splits chunk.
+
+            Args:
+                chunk (bytes): Chunk to be checked.
+
+            Returns:
+                tuple[bytes, bytes | None]: First element is bytes object which belongs to current message.
+                Second element is bytes objects of next message (message after CMD_POSTFIX_B).
+                If current message didn't end(CMD_POSTFIX_B was not found), second element is None.
+            """
             ind = self._matched_bytes.index(False)
 
             chunk_ind = 0
@@ -161,6 +209,9 @@ class AnyLengthSepReadHandler(ReadHandler):
 
 @dataclass(slots=True)
 class RechargingReadHandler(ReadHandler):
+    """Read handler which can read message of any CMD_POSTFIX_B length
+    and also takes care of recharging process, if encountered, and possible errors in it."""
+
     _subreader: AnyLengthSepReadHandler = field(init=False)
 
     def __post_init__(self) -> None:
@@ -187,6 +238,17 @@ class RechargingReadHandler(ReadHandler):
                 return await self._handle_recharging(max_len, timeout)
 
     async def _handle_recharging(self, max_len: int, timeout: int = TIMEOUT) -> ServerResult[bytes]:
+        """Handles recharging process.
+
+        Args:
+            max_len (int): Max length of the message including CMD_POSTFIX_B.
+            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+
+        Returns:
+            ServerResult[bytes]: Ok(message) if recharging and read were successful,
+            where message is the original message ment to be received,
+            else Err.
+        """
         match await self._subreader.read(
             ClientCommand.CLIENT_FULL_POWER.max_len_postfix, timeout=TIMEOUT_RECHARGING
         ):
