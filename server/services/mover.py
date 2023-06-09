@@ -122,24 +122,6 @@ class DefaultMover(Mover):
                     case Ok(data):
                         return data
 
-    def _determine_side(self, old_coords: Coords, new_coords: Coords) -> Side:
-        """Determines side of the coordinate plane based on coordinates before and after one move.
-            Coords must differ in only x or y.
 
-        Args:
-            old_coords (Coords): coorde before move
-            new_coords (Coords): coords after move
 
-        Raises:
-            ValueError: raised if it is impossible to calculate orientation from given coords
 
-        Returns:
-            Side: calculated side of the world
-        """
-        match (old_coords.x == new_coords.x, old_coords.y == new_coords.y):
-            case (True, False):
-                return Side.UP if new_coords.y > old_coords.y else Side.DOWN
-            case (False, True):
-                return Side.RIGHT if new_coords.x > old_coords.x else Side.LEFT
-            case _:
-                raise ValueError(f"Can't calculate orientation from coords: {old_coords=}, {new_coords=}")
