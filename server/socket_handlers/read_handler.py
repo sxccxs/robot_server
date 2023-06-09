@@ -160,11 +160,11 @@ class AnyLengthSepReadHandler(ReadHandler):
 
 
 @dataclass(slots=True)
-class Recharging2BytesReadHandler(ReadHandler):
-    _subreader: Split2BytesReadHandler = field(init=False)
+class RechargingReadHandler(ReadHandler):
+    _subreader: AnyLengthSepReadHandler = field(init=False)
 
     def __post_init__(self) -> None:
-        self._subreader = Split2BytesReadHandler(
+        self._subreader = AnyLengthSepReadHandler(
             self.reader, self.matcher, logger=self.logger, _chunk_size=self._chunk_size
         )
 
