@@ -54,7 +54,7 @@ class Orientation:
     side: Side
 
     def turn_left(self) -> None:
-        self.side = Side((self.side.value - 1) % 4)
+        self.side = Side((self.side - 1) % 4)
 
     def turn_right(self) -> None:
-        self.side = Side((self.side.value + 1) % 4)
+        self.side = Side((self.side + 1) % 4)
