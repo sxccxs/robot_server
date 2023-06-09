@@ -3,7 +3,7 @@ from typing import Protocol, Unpack
 from server.command_handlers.command_creator import CommandCreator, CommandCreatorKwargs, DefaultCommandCreator
 from server.command_handlers.command_matcher import CommandMatcher, CommandMatcherKwargs, DefaultCommandMatcher
 from server.services.authenticator import Authenticator, AuthenticatorKwargs, DefaultAuthenticator
-from server.services.mover import DefaultMover, Mover, MoverKwargs
+from server.services.mover import BFSMover, DefaultMover, Mover, MoverKwargs
 from server.services.secret_receiver import DefaultSecretReceiver, SecretReceiver, SecretReceiverKwargs
 from server.socket_handlers.read_handler import (
     AnyLengthSepReadHandler,
@@ -63,3 +63,8 @@ class DefaultManipulators:
 class RechargingManipulators(DefaultManipulators):
     def get_reader(self, **kwargs: Unpack[ReadHandlerKwargs]) -> ReadHandler:
         return RechargingReadHandler(**kwargs)
+
+
+class ExtendedManipulators(RechargingManipulators):
+    def get_mover(self, **kwargs: Unpack[MoverKwargs]) -> Mover:
+        return BFSMover(**kwargs)
