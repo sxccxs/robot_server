@@ -14,21 +14,47 @@ LOGGER = LOGGER_BASE.getChild("creator")
 
 
 class CommandCreatorKwargs(TypedDict):
+    """Key-word arguments dict for a CommandCreator."""
+
     logger: NotRequired[Logger]
 
 
 class CommandCreator(ABC):
+    """Abstract class for a server command creator."""
+
     def __init__(self, *, logger: Logger = LOGGER) -> None:
+        """Initializes CommandCreator.
+
+        Args:
+            logger (Logger, optional): Logger to be used during message creations. Defaults to LOGGER - base package logger.
+        """
         self.logger = logger
 
     @overload
     @abstractmethod
     def create_message(self, cmd: Literal[ServerCommand.SERVER_CONFIRMATION], confirmation_number: int) -> bytes:
+        """Creates a message of server confirmation from given confirmaton number.
+
+        Args:
+            cmd (Literal[ServerCommand.SERVER_CONFIRMATION]):
+            confirmation_number (int): Confirmation number of the authentication. For more info see readme.
+
+        Returns:
+            bytes: Created encoded message.
+        """
         ...
 
     @overload
     @abstractmethod
     def create_message(self, cmd: ServerCommandWithoutArgument) -> bytes:
+        """Creates a message of server command, which does not require any arguments.
+
+        Args:
+            cmd (ServerCommandWithoutArgument): Type of command without arguments.
+
+        Returns:
+            bytes: Created encoded message.
+        """
         ...
 
     @abstractmethod
@@ -37,6 +63,8 @@ class CommandCreator(ABC):
 
 
 class DefaultCommandCreator(CommandCreator):
+    """Default realization of command creator."""
+
     @override
     def create_message(self, cmd: ServerCommand, confirmation_number: int | None = None) -> bytes:
         match cmd:

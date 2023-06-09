@@ -19,31 +19,78 @@ LOGGER = LOGGER_BASE.getChild("matcher")
 
 
 class CommandMatcherKwargs(TypedDict):
+    """Key-word arguments dict for a CommandMatcher."""
+
     logger: NotRequired[Logger]
 
 
 class CommandMatcher(ABC):
+    """Abstract class for a server command matcher."""
+
     def __init__(self, *, logger: Logger = LOGGER) -> None:
+        """Initializes CommandMatcher.
+
+        Args:
+            logger (Logger, optional): Logger to be used during message matching. Defaults to LOGGER - base package logger.
+        """
         self.logger = logger
 
     @overload
     @abstractmethod
     def match(self, cmd: StringCommands, data: bytes) -> ServerResult[str]:
+        """Check if given data matches given command type.
+
+        Args:
+            cmd (StringCommands): Type of string-value command.
+            data (bytes): Data to check.
+
+        Returns:
+            ServerResult[str]: Ok(str_value) if matched, else Err(CommandSyntaxError).
+        """
         pass
 
     @overload
     @abstractmethod
     def match(self, cmd: NumberCommands, data: bytes) -> ServerResult[int]:
+        """Check if given data matches given command type.
+
+        Args:
+            cmd (NumberCommands): Type of number-value command.
+            data (bytes): Data to check.
+
+        Returns:
+            ServerResult[int]: Ok(num_value) if matched,
+            else Err(CommandNumberFormatError) if data wasa numeric value but of wrong format,
+            else Err(CommandSyntaxError).
+        """
         pass
 
     @overload
     @abstractmethod
     def match(self, cmd: Literal[ClientCommand.CLIENT_OK], data: bytes) -> ServerResult[Coords]:
+        """Check if given data matches given command type.
+
+        Args:
+            cmd (Literal[ClientCommand.CLIENT_OK]):
+            data (bytes): Data to check.
+
+        Returns:
+            ServerResult[Coords]: Ok(coords) if matched, else Err(CommandSyntaxError).
+        """
         pass
 
     @overload
     @abstractmethod
     def match(self, cmd: NonValueCommands, data: bytes) -> NoneServerResult:
+        """Check if given data matches given command type.
+
+        Args:
+            cmd (NonValueCommands): Type of non-value command.
+            data (bytes): Data to check.
+
+        Returns:
+            NoneServerResult: Ok(None) if matched, else Err(CommandSyntaxError).
+        """
         pass
 
     @abstractmethod
@@ -52,6 +99,8 @@ class CommandMatcher(ABC):
 
 
 class DefaultCommandMatcher(CommandMatcher):
+    """Default realization of command matcher."""
+
     @override
     def match(self, cmd: ClientCommand, data: bytes) -> ServerResult[str | int | Coords | None]:
         self.logger.debug(f"Got data in Matcher {data=}")
