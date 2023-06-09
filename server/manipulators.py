@@ -6,10 +6,10 @@ from server.services.authenticator import Authenticator, AuthenticatorKwargs, De
 from server.services.mover import DefaultMover, Mover, MoverKwargs
 from server.services.secret_receiver import DefaultSecretReceiver, SecretReceiver, SecretReceiverKwargs
 from server.socket_handlers.read_handler import (
+    AnyLengthSepReadHandler,
     ReadHandler,
     ReadHandlerKwargs,
-    Recharging2BytesReadHandler,
-    Split2BytesReadHandler,
+    RechargingReadHandler,
 )
 from server.socket_handlers.write_handler import DefaultWriteHandler, WriteHandler, WriteHandlerKwargs
 
@@ -45,7 +45,7 @@ class DefaultManipulators:
         return DefaultCommandCreator(**kwargs)
 
     def get_reader(self, **kwargs: Unpack[ReadHandlerKwargs]) -> ReadHandler:
-        return Split2BytesReadHandler(**kwargs)
+        return AnyLengthSepReadHandler(**kwargs)
 
     def get_writer(self, **kwargs: Unpack[WriteHandlerKwargs]) -> WriteHandler:
         return DefaultWriteHandler(**kwargs)
@@ -62,4 +62,4 @@ class DefaultManipulators:
 
 class RechargingManipulators(DefaultManipulators):
     def get_reader(self, **kwargs: Unpack[ReadHandlerKwargs]) -> ReadHandler:
-        return Recharging2BytesReadHandler(**kwargs)
+        return RechargingReadHandler(**kwargs)
