@@ -1,5 +1,5 @@
-import asyncio
 from abc import ABC, abstractmethod
+from asyncio import StreamReader, wait_for
 from collections import deque
 from dataclasses import KW_ONLY, dataclass, field
 from io import BytesIO
@@ -21,7 +21,9 @@ LOGGER = LOGGER_BASE.getChild("read_handler")
 
 
 class ReadHandlerKwargs(TypedDict, total=False):
-    reader: Required[asyncio.StreamReader]
+    """Key-word arguments dict for a ReadHandler."""
+
+    reader: Required[StreamReader]
     matcher: CommandMatcher
     logger: Logger
     _chunk_size: int
@@ -29,11 +31,22 @@ class ReadHandlerKwargs(TypedDict, total=False):
 
 @dataclass
 class ReadHandler(ABC):
-    reader: asyncio.StreamReader
+    """Abstract class for a socket reading handler."""
+
+    reader: StreamReader
+    """reader (StreamReader): Socket stream reader."""
+
     matcher: CommandMatcher
+    """matcher (CommandMatcher): Command matching handler."""
+
     _: KW_ONLY
+
     logger: Logger = LOGGER
+    """logger (Logger, optional): Defaults to subloger of base logger for a package."""
+
     _chunk_size: int = 8
+    """_chunk_size (int, optional): Size of chunks. Defaults to 8."""
+
     _msg_queue: deque[bytes] = field(init=False, default_factory=deque)
 
     @abstractmethod
@@ -42,7 +55,7 @@ class ReadHandler(ABC):
 
         Args:
             max_len (int): Max length of the message including CMD_POSTFIX_B.
-            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+            timeout (int, optional): Timeout of read. Defaults to TIMEOUT.
 
         Returns:
             ServerResult[bytes]: Ok(message) if read was successful,
@@ -106,7 +119,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             ServerResult[bytes]: Ok(chunk) if read was successful, else Err(ServerTimeoutError).
         """
         try:
-            chunk = await asyncio.wait_for(self.reader.read(self._chunk_size), timeout=timeout)
+            chunk = await wait_for(self.reader.read(self._chunk_size), timeout=timeout)
         except (TimeoutError, ConnectionResetError):
             return Err(ServerTimeoutError(f"Timeout exceeded: {timeout=}"))
 
@@ -218,6 +231,7 @@ class RechargingReadHandler(ReadHandler):
     _subreader: AnyLengthSepReadHandler = field(init=False)
 
     def __post_init__(self) -> None:
+        """Initializes subreader of a recharding read handler after initialization process."""
         self._subreader = AnyLengthSepReadHandler(
             self.reader, self.matcher, logger=self.logger, _chunk_size=self._chunk_size
         )
@@ -246,7 +260,7 @@ class RechargingReadHandler(ReadHandler):
 
         Args:
             max_len (int): Max length of the message including CMD_POSTFIX_B.
-            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+            timeout (int, optional): Timeout of read. Defaults to TIMEOUT.
 
         Returns:
             ServerResult[bytes]: Ok(message) if recharging and read were successful,
