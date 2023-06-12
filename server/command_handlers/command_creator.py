@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import KW_ONLY, dataclass
 from logging import Logger
 from typing import Literal, NotRequired, TypedDict, overload
 
@@ -19,16 +20,15 @@ class CommandCreatorKwargs(TypedDict):
     logger: NotRequired[Logger]
 
 
+@dataclass(slots=True)
 class CommandCreator(ABC):
     """Abstract class for a server command creator."""
 
-    def __init__(self, *, logger: Logger = LOGGER) -> None:
-        """Initializes CommandCreator.
+    _: KW_ONLY
 
-        Args:
-            logger (Logger, optional): Logger to be used during message creations. Defaults to LOGGER - base package logger.
-        """
-        self.logger = logger
+    logger: Logger = LOGGER
+    """logger (Logger, optional): Logger to be used during message creation.
+    Defaults to LOGGER - sublogger of base package logger."""
 
     @overload
     @abstractmethod

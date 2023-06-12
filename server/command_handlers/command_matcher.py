@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import KW_ONLY, dataclass
 from logging import Logger
 from typing import Literal, NotRequired, TypedDict, overload
 
@@ -24,16 +25,15 @@ class CommandMatcherKwargs(TypedDict):
     logger: NotRequired[Logger]
 
 
+@dataclass(slots=True)
 class CommandMatcher(ABC):
     """Abstract class for a server command matcher."""
 
-    def __init__(self, *, logger: Logger = LOGGER) -> None:
-        """Initializes CommandMatcher.
+    _: KW_ONLY
 
-        Args:
-            logger (Logger, optional): Logger to be used during message matching. Defaults to LOGGER - base package logger.
-        """
-        self.logger = logger
+    logger: Logger = LOGGER
+    """logger (Logger, optional): Logger to be used during message matching.
+    Defaults to LOGGER - sublogger of base package logger."""
 
     @overload
     @abstractmethod
