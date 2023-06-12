@@ -8,19 +8,17 @@ from typing_extensions import override
 
 from common.commands import ServerCommand
 from common.data_classes import KeysPair
-from common.result import Err, NoneResult, Ok
+from common.result import Err, Ok
 from server.exceptions import (
-    AuthenticationFailed,
     CommandKeyIdOutOfRangeError,
     CommandLoginFailError,
     CommandSyntaxError,
-    GetSecretMessageFailed,
     LogicError,
-    MoveFailed,
     ServerError,
     ServerTimeoutError,
 )
 from server.manipulators import DefaultManipulators, Manipulators
+from server.server_result import NoneServerResult
 
 from . import logger as LOGGER_BASE
 
@@ -28,6 +26,8 @@ LOGGER = LOGGER_BASE.getChild("worker")
 
 
 class WorkerKwargs(TypedDict):
+    """Key-word arguments dict for a Worker."""
+
     worker_id: int
     reader_stream: StreamReader
     writer_stream: StreamWriter
@@ -36,6 +36,8 @@ class WorkerKwargs(TypedDict):
 
 
 class Worker(ABC):
+    """Abstract class for a worker which fully handles one connection."""
+
     def __init__(
         self,
         worker_id: int,
@@ -44,6 +46,16 @@ class Worker(ABC):
         keys_dict: dict[int, KeysPair],
         manipulators: Manipulators | None = None,
     ) -> None:
+        """Initializes a Worker.
+
+        Args:
+            worker_id (int): Worker's unique id.
+            reader_stream (StreamReader): Socket stream reader.
+            writer_stream (StreamWriter): Socket stream writer.
+            keys_dict (dict[int, KeysPair]): Dict of ids and pairs of server and client key.
+            manipulators (Manipulators | None, optional): Object with all needed factories defined.Defaults to None.
+            If None, DefaultManipulators will be used.
+        """
         manipulators = manipulators if manipulators is not None else DefaultManipulators()
         self.worker_id = worker_id
         self.logger = LOGGER.getChild(f"{self.worker_id}#")
@@ -80,10 +92,12 @@ class Worker(ABC):
 
     @abstractmethod
     async def do(self) -> None:
+        """Starts worker to handle robot's connection."""
         ...
 
     @abstractmethod
     async def close(self) -> None:
+        """Closes passed to worker connection."""
         ...
 
     async def __aenter__(self) -> Self:
@@ -99,6 +113,8 @@ class Worker(ABC):
 
 
 class DefaultWorker(Worker):
+    """Default implemenation of Worker to fully handle one robot connection."""
+
     @override
     async def do(self) -> None:
         self.logger.info(f"Started new worker {self.worker_id}")
@@ -119,7 +135,12 @@ class DefaultWorker(Worker):
         await self.writer.close()
         self.logger.info(f"Ended worker {self.worker_id}")
 
-    async def _authenticate(self) -> NoneResult[AuthenticationFailed]:
+    async def _authenticate(self) -> NoneServerResult:
+        """Handles robot authentication.
+
+        Returns:
+            NoneServerResult: Ok(None) if authenticated successfully, else Err(ServerError).
+        """
         match await self.authenticator.authenticate():
             case Ok():
                 self.logger.info(f"Authenticated successfully")
@@ -127,9 +148,14 @@ class DefaultWorker(Worker):
             case Err(err):
                 self.logger.info(f"Error while authenticating: {err=}")
                 await self._process_error(err)
-                return Err(AuthenticationFailed(err))
+                return Err(err)
 
-    async def _move_to_start(self) -> NoneResult[MoveFailed]:
+    async def _move_to_start(self) -> NoneServerResult:
+        """Handles robot movement to (0, 0) point.
+
+        Returns:
+            NoneServerResult: Ok(None) if authenticated successfully, else Err(ServerError).
+        """
         match await self.mover.move_to_start():
             case Ok():
                 self.logger.info("Successfully moved to coordinates (0,0)")
@@ -137,9 +163,14 @@ class DefaultWorker(Worker):
             case Err(err):
                 self.logger.info(f"Error while moving: {err=}")
                 await self._process_error(err)
-                return Err(MoveFailed(err))
+                return Err(err)
 
-    async def _get_secret_message(self) -> NoneResult[GetSecretMessageFailed]:
+    async def _get_secret_message(self) -> NoneServerResult:
+        """Receives secret message from robot, after it moved to (0,0) point.
+
+        Returns:
+            NoneServerResult: Ok(None) if authenticated successfully, else Err(ServerError).
+        """
         match await self.receiver.receive():
             case Ok():
                 self.logger.info("Successfully received secret message")
@@ -147,9 +178,19 @@ class DefaultWorker(Worker):
             case Err(err):
                 self.logger.info(f"Error while receiving secret message: {err=}")
                 await self._process_error(err)
-                return Err(GetSecretMessageFailed(err))
+                return Err(err)
 
     async def _process_error(self, err: ServerError) -> None:
+        """Sends corresponding response for a given error if needed.
+        If err is not a CommandSyntaxError, LogicError, CommandKeyIdOutOfRangeError,
+        CommandLoginFailError or ServerTimeoutError, raises err.
+
+        Args:
+            err (ServerError): Error to handle.
+
+        Raises:
+            ServerError: err if err is not of allowed type.
+        """
         match err:
             case CommandSyntaxError():
                 await self._send_syntax_error()
@@ -165,13 +206,17 @@ class DefaultWorker(Worker):
                 raise err
 
     async def _send_syntax_error(self) -> None:
+        """Sends syntax error response."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_SYNTAX_ERROR))
 
     async def _send_key_out_of_range(self) -> None:
+        """Sends key out of range error response."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_KEY_OUT_OF_RANGE_ERROR))
 
     async def _send_login_failed(self) -> None:
+        """Sends login failed error response."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGIN_FAILED))
 
     async def _send_logic_error(self) -> None:
+        """Sends logic error response."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_LOGIC_ERROR))
