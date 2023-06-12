@@ -13,16 +13,20 @@ from server.services.base_service import BaseService, BaseServiceKwargs
 
 
 class MoverKwargs(BaseServiceKwargs):
+    """Key-word arguments dict for a Mover."""
+
     pass
 
 
 class Mover(BaseService, ABC):
+    """Abstract class for a robot movement service."""
+
     @abstractmethod
     async def move_to_start(self) -> NoneServerResult:
         """Moves robot to coordinates (0,0).
 
         Returns:
-            NoneServerResult: Ok if moved successfully, else Err.
+            NoneServerResult: Ok(None) if moved successfully, else Err(ServerError).
         """
         pass
 
@@ -126,6 +130,8 @@ class Mover(BaseService, ABC):
 
 
 class DefaultMover(Mover):
+    """Mover class which implements simple, not very effective movement algorithm."""
+
     @override
     async def move_to_start(self) -> NoneServerResult:
         self.logger.debug("Started mover")
@@ -179,12 +185,28 @@ class DefaultMover(Mover):
         self.logger.info(f"Moving done. Moved to new coords: {orient.coords}")
 
     async def _switch_axis(self, x_coord: int) -> Coords:
+        """Moves robot to or from x axis.
+        In the end robot remains on the same x position and turned to the same side.
+
+        Args:
+            x_coord (int): Current x coordinate.
+
+        Returns:
+            Coords: New robot coordinates.
+        """
         turns = (self._turn_right, self._turn_left) if x_coord < 0 else (self._turn_left, self._turn_right)
         await turns[0]()
         await self._make_move()
         return await turns[1]()
 
     async def _bypass_obstacle(self) -> Coords:
+        """Bypasses an obstacle which must be in front of a robot.
+        Robot will have the same y coordinate and will be turned to the same direction after all movement.
+        Moves robot to the right, then turns left, moves twice forward, moves left and turns right.
+
+        Returns:
+            Coords: New coordinates of robot.
+        """
         await self._turn_right()
         await self._make_move()
         await self._turn_left()
@@ -197,6 +219,8 @@ class DefaultMover(Mover):
 
 
 class BFSMover(Mover):
+    """Mover class which uses BFS algorithm to find a path for robot to move along."""
+
     @override
     async def move_to_start(self) -> NoneServerResult:
         self.logger.debug("Started mover")

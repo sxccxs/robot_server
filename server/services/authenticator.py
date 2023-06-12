@@ -10,38 +10,61 @@ from server.exceptions import CommandKeyIdOutOfRangeError, CommandLoginFailError
 from server.server_result import NoneServerResult, ServerResult
 from server.services.base_service import BaseService, BaseServiceKwargs
 
+HASH_MODULO = 0x10000
+
 
 class AuthenticatorKwargs(BaseServiceKwargs):
+    """Key-word arguments dict for a Authenticator."""
+
     keys_dict: dict[int, KeysPair]
 
 
 @dataclass(slots=True)
 class Authenticator(BaseService, ABC):
+    """Abstract class for an authentication service."""
+
     keys_dict: dict[int, KeysPair]
+    """keys_dict: dict[int, KeysPair]: Map of ids and server-client keys pairs."""
 
     @abstractmethod
     async def authenticate(self) -> NoneServerResult:
+        """Handles whole robot authentication process.
+
+        Returns:
+            NoneServerResult: Ok(None) if authenticated successfully, else Err(ServerError).
+        """
         pass
+
+    def _calculate_hash(self, username: str) -> int:
+        return (sum((ord(c) for c in username)) * 1000) % HASH_MODULO
+
+    def _encode_hash(self, name_hash: int, server_code: int) -> int:
+        return (name_hash + server_code) % HASH_MODULO
+
+    def _decode_hash(self, encoded_hash: int, client_code: int) -> int:
+        return (encoded_hash - client_code) % HASH_MODULO
 
 
 class DefaultAuthenticator(Authenticator):
+    """Default authentication service realization."""
+
     @override
     async def authenticate(self) -> NoneServerResult:
         self.logger.debug("Authenticator started")
         match await self._get_username():
-            case Ok(value):
-                username = value
             case Err() as err:
                 return err
+            case Ok(value):
+                username = value
         self.logger.info(f"Got valid name: {username=}")
 
         await self._send_key_request()
 
         match await self._get_key_id():
-            case Ok(value):
-                key_pair = value
             case Err() as err:
                 return err
+            case Ok(value):
+                key_pair = value
 
         self.logger.info(
             f"Got valid key id. Using pair "
@@ -53,10 +76,10 @@ class DefaultAuthenticator(Authenticator):
         await self._send_server_confirmation(name_hash, key_pair.server_key)
 
         match await self._get_client_confirmation(name_hash, key_pair.client_key):
-            case Ok():
-                pass
             case Err() as err:
                 return err
+            case Ok():
+                pass
 
         self.logger.info(f"Hashes match")
 
@@ -66,6 +89,11 @@ class DefaultAuthenticator(Authenticator):
         return Ok(None)
 
     async def _get_username(self) -> ServerResult[str]:
+        """Receives robot's username and validates it.
+
+        Returns:
+            ServerResult[str]: Ok(username) if data was valid else Err(ServerError).
+        """
         match await self.reader.read(ClientCommand.CLIENT_USERNAME.max_len_postfix):
             case Ok(value):
                 data = value
@@ -74,6 +102,12 @@ class DefaultAuthenticator(Authenticator):
         return self.matcher.match(ClientCommand.CLIENT_USERNAME, data)
 
     async def _get_key_id(self) -> ServerResult[KeysPair]:
+        """Receives id of a keys pair, which robot wants to use.
+        Checkes if it is a valid id.
+
+        Returns:
+            ServerResult[KeysPair]: Ok(keys_pair) if data was valid else Err(ServerError).
+        """
         match await self.reader.read(ClientCommand.CLIENT_KEY_ID.max_len_postfix):
             case Ok(value):
                 data = value
@@ -96,6 +130,16 @@ class DefaultAuthenticator(Authenticator):
         return Ok(self.keys_dict[key_pair_id])
 
     async def _get_client_confirmation(self, name_hash: int, client_key: int) -> NoneServerResult:
+        """Receives confirmation number from robot, checks if it is a valid number and
+        if it encodes client_key.
+
+        Args:
+            name_hash (int): Encoded robot's username.
+            client_key (int): Client key robot has selected for communication.
+
+        Returns:
+            NoneServerResult: Ok(None) if value was valid, else Err(ServerError).
+        """
         match await self.reader.read(ClientCommand.CLIENT_CONFIRMATION.max_len_postfix):
             case Ok(value):
                 data = value
@@ -117,9 +161,16 @@ class DefaultAuthenticator(Authenticator):
         return Ok(None)
 
     async def _send_key_request(self) -> None:
+        """Sends key request."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_KEY_REQUEST))
 
     async def _send_server_confirmation(self, name_hash: int, server_key: int) -> None:
+        """Sends server confirmation message.
+
+        Args:
+            name_hash (int): Encoded robot's username.
+            server_key (int): Server key robot has selected for communication.
+        """
         await self.writer.write(
             self.creator.create_message(
                 ServerCommand.SERVER_CONFIRMATION, self._encode_hash(name_hash, server_key)
@@ -127,13 +178,5 @@ class DefaultAuthenticator(Authenticator):
         )
 
     async def _send_ok(self) -> None:
+        """Sends ok message."""
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_OK))
-
-    def _calculate_hash(self, username: str) -> int:
-        return (sum((ord(c) for c in username)) * 1000) % 0x10000
-
-    def _encode_hash(self, name_hash: int, server_code: int) -> int:
-        return (name_hash + server_code) % 0x10000
-
-    def _decode_hash(self, encoded_hash: int, client_code: int) -> int:
-        return (encoded_hash - client_code) % 0x10000
