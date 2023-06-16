@@ -9,6 +9,8 @@ repository = "https://github.com/sxccxs/robot_server"
 
 [tool.poetry.dependencies]
 python = "^3.11.3"
+typing-extensions = "^4.6.3"
+
 
 [build-system]
 requires = ["poetry-core"]

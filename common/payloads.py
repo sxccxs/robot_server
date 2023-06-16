@@ -38,8 +38,8 @@ class Side(IntEnum):
             Coords must differ, but either in x or y, never both. Difference greater than 1 is ignored.
 
         Args:
-            old_coords (Coords): coorde before move.
-            new_coords (Coords): coords after move.
+            old_coords: coords before move.
+            new_coords: coords after move.
 
         Raises:
             ValueError: raised if it is impossible to calculate orientation from given coords.
@@ -61,8 +61,8 @@ class Orientation:
     """Class of robot state. Stores it's coordinates and side it is oriented.
 
     Args:
-        coords (Coords): Robot's current coordinates.
-        side (Side): Where robot looks right now.
+        coords: Robot's current coordinates.
+        side: Where robot looks right now.
     """
 
     coords: Coords

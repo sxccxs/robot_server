@@ -1,5 +1,4 @@
 from abc import ABC
-from dataclasses import InitVar, dataclass, field
 from logging import Logger
 from typing import NotRequired, TypedDict
 
@@ -18,31 +17,34 @@ class BaseServiceKwargs(TypedDict):
     writer: WriteHandler
     matcher: CommandMatcher
     creator: CommandCreator
-    logger_: NotRequired[Logger]
+    logger: NotRequired[Logger]
 
 
-@dataclass(slots=True)
 class BaseService(ABC):
     """Base class for all services."""
 
-    reader: ReadHandler
-    """reader (ReadHandler): Handler of socket reading."""
+    __slots__ = ("reader", "writer", "matcher", "creator", "logger")
 
-    writer: WriteHandler
-    """writer (WriteHandler): Handler of socket writing."""
+    def __init__(
+        self,
+        *,
+        reader: ReadHandler,
+        writer: WriteHandler,
+        matcher: CommandMatcher,
+        creator: CommandCreator,
+        logger: Logger | None = None,
+    ) -> None:
+        """All parameters are keyword only.
 
-    matcher: CommandMatcher
-    """matcher (CommandMatcher): Commands matching handler."""
-
-    creator: CommandCreator
-    """creator (CommandCreator): Commands creation handler."""
-
-    logger_: InitVar[Logger | None]
-    """logger_ (Logger | None, optional): Defaults to None.
-    If value is None, subloger of base logger for package will be used."""
-
-    logger: Logger = field(init=False)
-
-    def __post_init__(self, logger_: Logger | None):
-        """Initializes logger of base service after initialization process."""
-        self.logger = logger_ if logger_ is not None else LOGGER_BASE.getChild(self.__class__.__name__)
+        Args:
+            reader: Handler of socket reading.
+            writer: Handler of socket writing.
+            matcher: Commands matching handler.
+            creator: Commands creation handler.
+            logger_: (optional) Defaults to None. If value is None, sublogger of base package logger will be used.
+        """
+        self.reader = reader
+        self.writer = writer
+        self.matcher = matcher
+        self.creator = creator
+        self.logger = logger if logger is not None else LOGGER_BASE.getChild(self.__class__.__name__.lower())

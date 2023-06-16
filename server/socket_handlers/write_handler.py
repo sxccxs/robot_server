@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from asyncio import StreamWriter
-from dataclasses import KW_ONLY, dataclass
 from logging import Logger
 from typing import Required, TypedDict
 
@@ -22,20 +21,20 @@ class WriteHandlerKwargs(TypedDict, total=False):
     logger: Logger
 
 
-@dataclass
 class WriteHandler(ABC):
     """Abstract class for a socket writting handler."""
 
-    writer: StreamWriter
-    """writer (StreamWriter): Socket stream writer."""
+    def __init__(self, *, writer: StreamWriter, creator: CommandCreator, logger: Logger = LOGGER) -> None:
+        """All parameters are keyword only.
 
-    creator: CommandCreator
-    """creator (CommandCreator): Command creation handler."""
-
-    _: KW_ONLY
-
-    logger: Logger = LOGGER
-    """logger (Logger, optional): Defaults to subloger of base logger for a package."""
+        Args:
+            writer: Socket stram writer.
+            creator: Command creation handler.
+            logger: Defaults to sublogger of base package logger.
+        """
+        self.writer = writer
+        self.creator = creator
+        self.logger = logger
 
     @abstractmethod
     async def write(self, data: bytes) -> None:
