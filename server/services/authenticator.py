@@ -1,16 +1,17 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from typing import Unpack
 
 from typing_extensions import override
 
 from common.commands import ClientCommand, ServerCommand
-from common.data_classes import KeysPair
+from common.payloads import KeysPair
 from common.result import Err, Ok
 from server.exceptions import CommandKeyIdOutOfRangeError, CommandLoginFailError, CommandNumberFormatError
 from server.server_result import NoneServerResult, ServerResult
 from server.services.base_service import BaseService, BaseServiceKwargs
 
 HASH_MODULO = 0x10000
+"""Module for keys encoding."""
 
 
 class AuthenticatorKwargs(BaseServiceKwargs):
@@ -19,12 +20,19 @@ class AuthenticatorKwargs(BaseServiceKwargs):
     keys_dict: dict[int, KeysPair]
 
 
-@dataclass(slots=True)
 class Authenticator(BaseService, ABC):
     """Abstract class for an authentication service."""
 
-    keys_dict: dict[int, KeysPair]
-    """keys_dict: dict[int, KeysPair]: Map of ids and server-client keys pairs."""
+    __slots__ = ("keys_dict",)
+
+    def __init__(self, *, keys_dict: dict[int, KeysPair], **kwargs: Unpack[BaseServiceKwargs]) -> None:
+        """
+        Args:
+            keys_dict: Keyword parameter. Map of ids and server-client keys pairs.
+            kwargs (BaseServiceKwargs): Parameters of a base service class.
+        """
+        super().__init__(**kwargs)
+        self.keys_dict = keys_dict
 
     @abstractmethod
     async def authenticate(self) -> NoneServerResult:
@@ -134,8 +142,8 @@ class DefaultAuthenticator(Authenticator):
         if it encodes client_key.
 
         Args:
-            name_hash (int): Encoded robot's username.
-            client_key (int): Client key robot has selected for communication.
+            name_hash: Encoded robot's username.
+            client_key: Client key robot has selected for communication.
 
         Returns:
             NoneServerResult: Ok(None) if value was valid, else Err(ServerError).
@@ -168,8 +176,8 @@ class DefaultAuthenticator(Authenticator):
         """Sends server confirmation message.
 
         Args:
-            name_hash (int): Encoded robot's username.
-            server_key (int): Server key robot has selected for communication.
+            name_hash: Encoded robot's username.
+            server_key: Server key robot has selected for communication.
         """
         await self.writer.write(
             self.creator.create_message(

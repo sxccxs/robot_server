@@ -5,7 +5,7 @@ from functools import partial
 from typing_extensions import override
 
 from common.commands import ClientCommand, ServerCommand
-from common.data_classes import Axis, Coords, Orientation, Side
+from common.payloads import Axis, Coords, Orientation, Side
 from common.result import Err, Ok
 from server.exceptions import ServerError
 from server.server_result import NoneServerResult
@@ -34,8 +34,8 @@ class Mover(BaseService, ABC):
         """Rotates to provided side. Changes orient object.
 
         Args:
-            orient (Orientation): Current orientation.
-            to_side (Side): Side to turn to.
+            orient: Current orientation.
+            to_side: Side to turn to.
         """
         if orient.side == to_side:
             return
@@ -82,7 +82,7 @@ class Mover(BaseService, ABC):
         """Sends turn right, turn orient object and gets a response.
 
         Args:
-            orient (Orientation | None, optional): Orientation object which will be turned right if provided.
+            orient: (optional) Orientation object which will be turned right if provided.
             Defaults to None.
 
         Returns:
@@ -97,7 +97,7 @@ class Mover(BaseService, ABC):
         """Sends turn left, turn orient object and gets a response.
 
         Args:
-            orient (Orientation | None, optional): Orientation object which will be turned left if provided.
+            orient: (optional) Orientation object which will be turned left if provided.
             Defaults to None.
 
         Returns:
@@ -158,8 +158,8 @@ class DefaultMover(Mover):
         """Moves to 0 by the specified axis.
 
         Args:
-            orient (Orientation): orientation object determening current position.
-            axis (Axis): axis to move along.
+            orient: orientation object determening current position.
+            axis: axis to move along.
         """
         self.logger.info(f"Started moving to 0 by axis {axis.name}")
         if axis == Axis.X:
@@ -189,7 +189,7 @@ class DefaultMover(Mover):
         In the end robot remains on the same x position and turned to the same side.
 
         Args:
-            x_coord (int): Current x coordinate.
+            x_coord: Current x coordinate.
 
         Returns:
             Coords: New robot coordinates.
@@ -245,7 +245,7 @@ class BFSMover(Mover):
         """Moves robot with given orientation to the center using bfs algorithm.
 
         Args:
-            orientation (Orientation): Robot's orientation at the beginning.
+            orientation: Robot's orientation at the beginning.
         """
         if orientation.coords == Coords(0, 0):
             return
@@ -274,8 +274,8 @@ class BFSMover(Mover):
         """BFS algorithm implementation to search for a way to (0,0).
 
         Args:
-            start (Coords): Beginning position.
-            obstacles (set[Coords]): Set of coordinates, which are not reachable.
+            start: Beginning position.
+            obstacles: Set of coordinates, which are not reachable.
 
         Returns:
             deque[Coords]: Path from start to (0,0) stored as a deque.

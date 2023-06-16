@@ -7,7 +7,7 @@ from typing import NotRequired, Self, TypedDict
 from typing_extensions import override
 
 from common.commands import ServerCommand
-from common.data_classes import KeysPair
+from common.payloads import KeysPair
 from common.result import Err, Ok
 from server.exceptions import (
     CommandKeyIdOutOfRangeError,
@@ -36,25 +36,27 @@ class WorkerKwargs(TypedDict):
 
 
 class Worker(ABC):
-    """Abstract class for a worker which fully handles one connection."""
+    """Abstract class for a worker which fully handles one connection.
+    Can be used in context manager(with statement).
+    """
 
     def __init__(
         self,
+        *,
         worker_id: int,
         reader_stream: StreamReader,
         writer_stream: StreamWriter,
         keys_dict: dict[int, KeysPair],
         manipulators: Manipulators | None = None,
     ) -> None:
-        """Initializes a Worker.
+        """All parameters are keyword only.
 
         Args:
-            worker_id (int): Worker's unique id.
-            reader_stream (StreamReader): Socket stream reader.
-            writer_stream (StreamWriter): Socket stream writer.
-            keys_dict (dict[int, KeysPair]): Dict of ids and pairs of server and client key.
-            manipulators (Manipulators | None, optional): Object with all needed factories defined.Defaults to None.
-            If None, DefaultManipulators will be used.
+            worker_id: Worker's unique id. Is used for logging.
+            reader_stream: Socket stream reader.
+            writer_stream: Socket stream writer.
+            keys_dict: Dict of ids and pairs of server and client key.
+            manipulators: (optional) Object with all needed factories defined. Defaults to None. If None, DefaultManipulators will be used.
         """
         manipulators = manipulators if manipulators is not None else DefaultManipulators()
         self.worker_id = worker_id
@@ -73,21 +75,21 @@ class Worker(ABC):
             keys_dict=keys_dict,
             matcher=self.matcher,
             creator=self.creator,
-            logger_=self.logger.getChild("authenticator"),
+            logger=self.logger.getChild("authenticator"),
         )
         self.mover = manipulators.get_mover(
             reader=self.reader,
             writer=self.writer,
             matcher=self.matcher,
             creator=self.creator,
-            logger_=self.logger.getChild("mover"),
+            logger=self.logger.getChild("mover"),
         )
         self.receiver = manipulators.get_receiver(
             reader=self.reader,
             writer=self.writer,
             matcher=self.matcher,
             creator=self.creator,
-            logger_=self.logger.getChild("secret_receiver"),
+            logger=self.logger.getChild("secret_receiver"),
         )
 
     @abstractmethod
@@ -186,7 +188,7 @@ class DefaultWorker(Worker):
         CommandLoginFailError or ServerTimeoutError, raises err.
 
         Args:
-            err (ServerError): Error to handle.
+            err: Error to handle.
 
         Raises:
             ServerError: err if err is not of allowed type.
