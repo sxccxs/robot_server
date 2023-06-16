@@ -15,7 +15,13 @@ ServerCommandWithoutArgument = Literal[
     ServerCommand.SERVER_LOGIC_ERROR,
     ServerCommand.SERVER_KEY_OUT_OF_RANGE_ERROR,
 ]
+"""Type reprezenting all server commands with no arguments."""
 
 StringCommands = Literal[ClientCommand.CLIENT_USERNAME, ClientCommand.CLIENT_MESSAGE]
+"""Type reprezenting all client commands with string value."""
+
 NumberCommands = Literal[ClientCommand.CLIENT_CONFIRMATION, ClientCommand.CLIENT_KEY_ID]
+"""Type reprezenting all client commands with numeric value."""
+
 NonValueCommands = Literal[ClientCommand.CLIENT_RECHARGING, ClientCommand.CLIENT_FULL_POWER]
+"""Type reprezenting all client commands with no value."""

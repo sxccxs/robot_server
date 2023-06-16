@@ -1,5 +1,4 @@
 from abc import ABC
-from dataclasses import InitVar, dataclass, field
 from logging import Logger
 from typing import NotRequired, TypedDict
 
@@ -12,21 +11,40 @@ from . import logger as LOGGER_BASE
 
 
 class BaseServiceKwargs(TypedDict):
+    """Key-word arguments dict base for any service."""
+
     reader: ReadHandler
     writer: WriteHandler
     matcher: CommandMatcher
     creator: CommandCreator
-    logger_: NotRequired[Logger]
+    logger: NotRequired[Logger]
 
 
-@dataclass(slots=True)
 class BaseService(ABC):
-    reader: ReadHandler
-    writer: WriteHandler
-    matcher: CommandMatcher
-    creator: CommandCreator
-    logger_: InitVar[Logger | None]
-    logger: Logger = field(init=False)
+    """Base class for all services."""
 
-    def __post_init__(self, logger_: Logger | None):
-        self.logger = logger_ if logger_ is not None else LOGGER_BASE.getChild(self.__class__.__name__)
+    __slots__ = ("reader", "writer", "matcher", "creator", "logger")
+
+    def __init__(
+        self,
+        *,
+        reader: ReadHandler,
+        writer: WriteHandler,
+        matcher: CommandMatcher,
+        creator: CommandCreator,
+        logger: Logger | None = None,
+    ) -> None:
+        """All parameters are keyword only.
+
+        Args:
+            reader: Handler of socket reading.
+            writer: Handler of socket writing.
+            matcher: Commands matching handler.
+            creator: Commands creation handler.
+            logger_: (optional) Defaults to None. If value is None, sublogger of base package logger will be used.
+        """
+        self.reader = reader
+        self.writer = writer
+        self.matcher = matcher
+        self.creator = creator
+        self.logger = logger if logger is not None else LOGGER_BASE.getChild(self.__class__.__name__.lower())

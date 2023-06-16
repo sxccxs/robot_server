@@ -18,10 +18,10 @@ async def main():
     configure_logging()
 
     from common.config import HOST, KEYS, PORT
-    from server.manipulators import RechargingManipulators
+    from server.manipulators import ExtendedManipulators
     from server.server import Server
 
-    server = Server(HOST, PORT, KEYS, manipulators=RechargingManipulators())
+    server = Server(HOST, PORT, KEYS, manipulators=ExtendedManipulators())
     await server.run()
 
 
