@@ -9,17 +9,27 @@ from server.services.base_service import BaseService, BaseServiceKwargs
 
 
 class SecretReceiverKwargs(BaseServiceKwargs):
+    """Key-word arguments dict for a SecretReceiver."""
+
     pass
 
 
 class SecretReceiver(BaseService, ABC):
+    """Abstract class for a secret message receiver service."""
+
     @abstractmethod
     async def receive(self) -> NoneServerResult:
-        "Receives secret message from client"
+        """Receives a secret message from robot.
+
+        Returns:
+            NoneServerResult: Ok(None) if received successfully, else Err(ServerError).
+        """
         ...
 
 
 class DefaultSecretReceiver(SecretReceiver):
+    """Default implementation of secret message receiver service."""
+
     @override
     async def receive(self) -> NoneServerResult:
         await self.writer.write(self.creator.create_message(ServerCommand.SERVER_PICK_UP))

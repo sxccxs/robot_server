@@ -1,10 +1,9 @@
-import asyncio
 from abc import ABC, abstractmethod
+from asyncio import StreamReader, wait_for
 from collections import deque
-from dataclasses import KW_ONLY, dataclass, field
 from io import BytesIO
 from logging import Logger
-from typing import Required, TypedDict
+from typing import Required, TypedDict, Unpack
 
 from typing_extensions import override
 
@@ -21,28 +20,42 @@ LOGGER = LOGGER_BASE.getChild("read_handler")
 
 
 class ReadHandlerKwargs(TypedDict, total=False):
-    reader: Required[asyncio.StreamReader]
-    matcher: CommandMatcher
+    """Key-word arguments dict for a ReadHandler."""
+
+    reader: Required[StreamReader]
+    matcher: Required[CommandMatcher]
     logger: Logger
     _chunk_size: int
 
 
-@dataclass
 class ReadHandler(ABC):
-    reader: asyncio.StreamReader
-    matcher: CommandMatcher
-    _: KW_ONLY
-    logger: Logger = LOGGER
-    _chunk_size: int = 8
-    _msg_queue: deque[bytes] = field(init=False, default_factory=deque)
+    """Abstract class for a socket reading handler."""
+
+    __slots__ = ("reader", "matcher", "logger", "_chunk_size")
+
+    def __init__(
+        self, *, reader: StreamReader, matcher: CommandMatcher, logger: Logger = LOGGER, _chunk_size: int = 8
+    ) -> None:
+        """All parameters are keyword only.
+
+        Args:
+            reader: Socket stream reader.
+            matcher: Command matching handler.
+            logger: (optional) Defaults to sublogger of base package logger.
+            _chunk_size: (optional) Size of chunks. Defaults to 8.
+        """
+        self.reader = reader
+        self.matcher = matcher
+        self.logger = logger
+        self._chunk_size = _chunk_size
 
     @abstractmethod
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
         """Reads message of given maximum length ended with CMD_POSTFIX_B.
 
         Args:
-            max_len (int): Max length of the message including CMD_POSTFIX_B.
-            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+            max_len: Max length of the message including CMD_POSTFIX_B.
+            timeout: (optional) Timeout of read. Defaults to TIMEOUT.
 
         Returns:
             ServerResult[bytes]: Ok(message) if read was successful,
@@ -54,6 +67,16 @@ class ReadHandler(ABC):
 
 class AnyLengthSepReadHandler(ReadHandler):
     """Read handler which can process messages with any CMD_POSTFIX_B length."""
+
+    __slots__ = ("_msg_queue",)
+
+    def __init__(self, **kwargs: Unpack[ReadHandlerKwargs]) -> None:
+        """
+        Args:
+            kwargs (ReadHandlerKwargs): Parameters of a base socket reading handler.
+        """
+        super().__init__(**kwargs)
+        self._msg_queue = deque[bytes]()
 
     @override
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
@@ -106,7 +129,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             ServerResult[bytes]: Ok(chunk) if read was successful, else Err(ServerTimeoutError).
         """
         try:
-            chunk = await asyncio.wait_for(self.reader.read(self._chunk_size), timeout=timeout)
+            chunk = await wait_for(self.reader.read(self._chunk_size), timeout=timeout)
         except (TimeoutError, ConnectionResetError):
             return Err(ServerTimeoutError(f"Timeout exceeded: {timeout=}"))
 
@@ -141,18 +164,16 @@ class AnyLengthSepReadHandler(ReadHandler):
 
         return msg_stream.getvalue()
 
-    @dataclass(init=False, slots=True)
     class SeparatorSplitter:
         """Object that splits chunks by CMD_POSTFIX_B."""
 
-        _matched_bytes: list[bool]
+        __slots__ = ("_matched_bytes",)
 
         def __init__(self, beginning_value: bytes | None = None):
             """Initializes SeparatorSplitter.
 
             Args:
-                beginning_value (bytes | None, optional): The beginning value of the read,
-                which may end with part of CMD_POSTFIX_B. Defaults to None.
+                beginning_value (bytes | None, optional): The beginning value of the read, which may end with part of CMD_POSTFIX_B. Defaults to None.
             """
             self._matched_bytes: list[bool] = self._create_matched_empty()
 
@@ -175,7 +196,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             If found, splits chunk.
 
             Args:
-                chunk (bytes): Chunk to be checked.
+                chunk: Chunk to be checked.
 
             Returns:
                 tuple[bytes, bytes | None]: First element is bytes object which belongs to current message.
@@ -210,17 +231,19 @@ class AnyLengthSepReadHandler(ReadHandler):
             return chunk[:chunk_ind], chunk[chunk_ind:]
 
 
-@dataclass(slots=True)
 class RechargingReadHandler(ReadHandler):
     """Read handler which can read message of any CMD_POSTFIX_B length
     and also takes care of recharging process, if encountered, and possible errors in it."""
 
-    _subreader: AnyLengthSepReadHandler = field(init=False)
+    __slots__ = ("_subreader",)
 
-    def __post_init__(self) -> None:
-        self._subreader = AnyLengthSepReadHandler(
-            self.reader, self.matcher, logger=self.logger, _chunk_size=self._chunk_size
-        )
+    def __init__(self, **kwargs: Unpack[ReadHandlerKwargs]) -> None:
+        """
+        Args:
+            kwargs (ReadHandlerKwargs): Parameters of a base socket reading handler.
+        """
+        super().__init__(**kwargs)
+        self._subreader = AnyLengthSepReadHandler(**kwargs)
 
     @override
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
@@ -245,8 +268,8 @@ class RechargingReadHandler(ReadHandler):
         """Handles recharging process.
 
         Args:
-            max_len (int): Max length of the message including CMD_POSTFIX_B.
-            timeout (int, optional): Timeout or read. Defaults to TIMEOUT.
+            max_len: Max length of the message including CMD_POSTFIX_B.
+            timeout: (optional) Timeout of read. Defaults to TIMEOUT.
 
         Returns:
             ServerResult[bytes]: Ok(message) if recharging and read were successful,

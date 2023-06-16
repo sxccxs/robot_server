@@ -5,7 +5,7 @@ from functools import partial
 from typing_extensions import override
 
 from common.commands import ClientCommand, ServerCommand
-from common.data_classes import Axis, Coords, Orientation, Side
+from common.payloads import Axis, Coords, Orientation, Side
 from common.result import Err, Ok
 from server.exceptions import ServerError
 from server.server_result import NoneServerResult
@@ -13,16 +13,20 @@ from server.services.base_service import BaseService, BaseServiceKwargs
 
 
 class MoverKwargs(BaseServiceKwargs):
+    """Key-word arguments dict for a Mover."""
+
     pass
 
 
 class Mover(BaseService, ABC):
+    """Abstract class for a robot movement service."""
+
     @abstractmethod
     async def move_to_start(self) -> NoneServerResult:
         """Moves robot to coordinates (0,0).
 
         Returns:
-            NoneServerResult: Ok if moved successfully, else Err.
+            NoneServerResult: Ok(None) if moved successfully, else Err(ServerError).
         """
         pass
 
@@ -30,8 +34,8 @@ class Mover(BaseService, ABC):
         """Rotates to provided side. Changes orient object.
 
         Args:
-            orient (Orientation): Current orientation.
-            to_side (Side): Side to turn to.
+            orient: Current orientation.
+            to_side: Side to turn to.
         """
         if orient.side == to_side:
             return
@@ -78,7 +82,7 @@ class Mover(BaseService, ABC):
         """Sends turn right, turn orient object and gets a response.
 
         Args:
-            orient (Orientation | None, optional): Orientation object which will be turned right if provided.
+            orient: (optional) Orientation object which will be turned right if provided.
             Defaults to None.
 
         Returns:
@@ -93,7 +97,7 @@ class Mover(BaseService, ABC):
         """Sends turn left, turn orient object and gets a response.
 
         Args:
-            orient (Orientation | None, optional): Orientation object which will be turned left if provided.
+            orient: (optional) Orientation object which will be turned left if provided.
             Defaults to None.
 
         Returns:
@@ -126,6 +130,8 @@ class Mover(BaseService, ABC):
 
 
 class DefaultMover(Mover):
+    """Mover class which implements simple, not very effective movement algorithm."""
+
     @override
     async def move_to_start(self) -> NoneServerResult:
         self.logger.debug("Started mover")
@@ -152,8 +158,8 @@ class DefaultMover(Mover):
         """Moves to 0 by the specified axis.
 
         Args:
-            orient (Orientation): orientation object determening current position.
-            axis (Axis): axis to move along.
+            orient: orientation object determening current position.
+            axis: axis to move along.
         """
         self.logger.info(f"Started moving to 0 by axis {axis.name}")
         if axis == Axis.X:
@@ -179,12 +185,28 @@ class DefaultMover(Mover):
         self.logger.info(f"Moving done. Moved to new coords: {orient.coords}")
 
     async def _switch_axis(self, x_coord: int) -> Coords:
+        """Moves robot to or from x axis.
+        In the end robot remains on the same x position and turned to the same side.
+
+        Args:
+            x_coord: Current x coordinate.
+
+        Returns:
+            Coords: New robot coordinates.
+        """
         turns = (self._turn_right, self._turn_left) if x_coord < 0 else (self._turn_left, self._turn_right)
         await turns[0]()
         await self._make_move()
         return await turns[1]()
 
     async def _bypass_obstacle(self) -> Coords:
+        """Bypasses an obstacle which must be in front of a robot.
+        Robot will have the same y coordinate and will be turned to the same direction after all movement.
+        Moves robot to the right, then turns left, moves twice forward, moves left and turns right.
+
+        Returns:
+            Coords: New coordinates of robot.
+        """
         await self._turn_right()
         await self._make_move()
         await self._turn_left()
@@ -197,6 +219,8 @@ class DefaultMover(Mover):
 
 
 class BFSMover(Mover):
+    """Mover class which uses BFS algorithm to find a path for robot to move along."""
+
     @override
     async def move_to_start(self) -> NoneServerResult:
         self.logger.debug("Started mover")
@@ -221,7 +245,7 @@ class BFSMover(Mover):
         """Moves robot with given orientation to the center using bfs algorithm.
 
         Args:
-            orientation (Orientation): Robot's orientation at the beginning.
+            orientation: Robot's orientation at the beginning.
         """
         if orientation.coords == Coords(0, 0):
             return
@@ -250,8 +274,8 @@ class BFSMover(Mover):
         """BFS algorithm implementation to search for a way to (0,0).
 
         Args:
-            start (Coords): Beginning position.
-            obstacles (set[Coords]): Set of coordinates, which are not reachable.
+            start: Beginning position.
+            obstacles: Set of coordinates, which are not reachable.
 
         Returns:
             deque[Coords]: Path from start to (0,0) stored as a deque.
