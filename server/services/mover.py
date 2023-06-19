@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import deque
 from functools import partial
@@ -75,7 +77,7 @@ class Mover(BaseService, ABC):
         Returns:
             Coords: Coords after move.
         """
-        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_MOVE))
+        await self._writer.write(self._creator.create_message(ServerCommand.SERVER_MOVE))
         return await self._get_ok_response()
 
     async def _turn_right(self, orient: Orientation | None = None) -> Coords:
@@ -90,7 +92,7 @@ class Mover(BaseService, ABC):
         """
         if orient is not None:
             orient.turn_right()
-        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_TURN_RIGHT))
+        await self._writer.write(self._creator.create_message(ServerCommand.SERVER_TURN_RIGHT))
         return await self._get_ok_response()
 
     async def _turn_left(self, orient: Orientation | None = None) -> Coords:
@@ -105,7 +107,7 @@ class Mover(BaseService, ABC):
         """
         if orient is not None:
             orient.turn_left()
-        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_TURN_LEFT))
+        await self._writer.write(self._creator.create_message(ServerCommand.SERVER_TURN_LEFT))
         return await self._get_ok_response()
 
     async def _get_ok_response(self) -> Coords:
@@ -117,12 +119,12 @@ class Mover(BaseService, ABC):
         Returns:
             Coords: Coordinates received from robot.
         """
-        match await self.reader.read(ClientCommand.CLIENT_OK.max_len_postfix):
+        match await self._reader.read(ClientCommand.CLIENT_OK.max_len_postfix):
             case Err(err):
                 raise err
             case Ok(value):
                 data = value
-        match self.matcher.match(ClientCommand.CLIENT_OK, data):
+        match self._matcher.match_ok(ClientCommand.CLIENT_OK, data):
             case Err(err):
                 raise err
             case Ok(data):
@@ -134,22 +136,22 @@ class DefaultMover(Mover):
 
     @override
     async def move_to_start(self) -> NoneServerResult:
-        self.logger.debug("Started mover")
+        self._logger.debug("Started mover")
         try:
             match await self._get_orientation():
                 case None:
-                    self.logger.info("Moved to (0,0).")
+                    self._logger.info("Moved to (0,0).")
                     return Ok(None)
                 case Orientation() as orientation:
                     pass
 
-            self.logger.info(
+            self._logger.info(
                 f"Starting position: {orientation.coords}, starting orientation: {orientation.side.name}"
             )
             await self._move_to_0(orientation, Axis.X)
             await self._move_to_0(orientation, Axis.Y)
         except ServerError as err:
-            self.logger.info("Error while moving")
+            self._logger.info("Error while moving")
             return Err(err)
 
         return Ok(None)
@@ -161,7 +163,7 @@ class DefaultMover(Mover):
             orient: orientation object determening current position.
             axis: axis to move along.
         """
-        self.logger.info(f"Started moving to 0 by axis {axis.name}")
+        self._logger.info(f"Started moving to 0 by axis {axis.name}")
         if axis == Axis.X:
             move_side = Side.LEFT if orient.coords.x > 0 else Side.RIGHT
         else:
@@ -177,12 +179,14 @@ class DefaultMover(Mover):
         while condition():  # while one x or y (depending on axis) is not 0
             new_pos = await self._make_move()
             if new_pos == orient.coords:
-                self.logger.debug(f"Found obstacle moving from {orient.coords} with direction: {orient.side.name}")
+                self._logger.debug(
+                    f"Found obstacle moving from {orient.coords} with direction: {orient.side.name}"
+                )
                 orient.coords = await bypasser()
             else:
                 orient.coords = new_pos
-            self.logger.debug(f"Moved to {orient.coords}")
-        self.logger.info(f"Moving done. Moved to new coords: {orient.coords}")
+            self._logger.debug(f"Moved to {orient.coords}")
+        self._logger.info(f"Moving done. Moved to new coords: {orient.coords}")
 
     async def _switch_axis(self, x_coord: int) -> Coords:
         """Moves robot to or from x axis.
@@ -223,20 +227,20 @@ class BFSMover(Mover):
 
     @override
     async def move_to_start(self) -> NoneServerResult:
-        self.logger.debug("Started mover")
+        self._logger.debug("Started mover")
         try:
             match await self._get_orientation():
                 case None:
-                    self.logger.info("Moved to (0,0).")
+                    self._logger.info("Moved to (0,0).")
                     return Ok(None)
                 case Orientation() as orientation:
                     pass
-            self.logger.info(
+            self._logger.info(
                 f"Starting position: {orientation.coords}, starting orientation: {orientation.side.name}"
             )
             await self._move_to_center(orientation)
         except ServerError as err:
-            self.logger.info("Error while moving")
+            self._logger.info("Error while moving")
             return Err(err)
 
         return Ok(None)
@@ -251,7 +255,7 @@ class BFSMover(Mover):
             return
         obstacles = set[Coords]()
         path_queue = self._bfs(orientation.coords, obstacles)
-        self.logger.debug(f"Planed way: {path_queue}")
+        self._logger.debug(f"Planed way: {path_queue}")
         path_queue.popleft()  # remove current Coords from path
         while path_queue:
             if orientation.coords == Coords(0, 0):
@@ -263,12 +267,12 @@ class BFSMover(Mover):
             if orientation.coords == new_coords:
                 obstacles.add(next_coords)
                 path_queue = self._bfs(orientation.coords, obstacles)
-                self.logger.debug(f"Obstacle found at {next_coords}. New planed way: {path_queue}")
+                self._logger.debug(f"Obstacle found at {next_coords}. New planed way: {path_queue}")
                 path_queue.popleft()  # remove current Coords from path
             else:
                 orientation.coords = new_coords
 
-        self.logger.info("Achieved (0,0).")
+        self._logger.info("Achieved (0,0).")
 
     def _bfs(self, start: Coords, obstacles: set[Coords]) -> deque[Coords]:
         """BFS algorithm implementation to search for a way to (0,0).

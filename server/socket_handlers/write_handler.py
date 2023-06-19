@@ -32,9 +32,9 @@ class WriteHandler(ABC):
             creator: Command creation handler.
             logger: Defaults to sublogger of base package logger.
         """
-        self.writer = writer
-        self.creator = creator
-        self.logger = logger
+        self._writer = writer
+        self._creator = creator
+        self._logger = logger
 
     @abstractmethod
     async def write(self, data: bytes) -> None:
@@ -48,10 +48,10 @@ class WriteHandler(ABC):
     async def close(self) -> None:
         """Closes connection with socket."""
         try:
-            self.writer.close()
-            await self.writer.wait_closed()
+            self._writer.close()
+            await self._writer.wait_closed()
         except ConnectionResetError:
-            self.logger.debug("Connection was closed by client")
+            self._logger.debug("Connection was closed by client")
 
 
 class DefaultWriteHandler(WriteHandler):
@@ -59,10 +59,10 @@ class DefaultWriteHandler(WriteHandler):
 
     @override
     async def write(self, data: bytes) -> None:
-        self.logger.debug(f"Prepared data: {data}")
+        self._logger.debug(f"Prepared data: {data}")
 
-        self.writer.write(data)
-        self.writer.write(CMD_POSTFIX_B)
-        await self.writer.drain()
+        self._writer.write(data)
+        self._writer.write(CMD_POSTFIX_B)
+        await self._writer.drain()
 
-        self.logger.debug(f"Sended message: {data + CMD_POSTFIX_B}")
+        self._logger.debug(f"Sended message: {data + CMD_POSTFIX_B}")
