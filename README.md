@@ -293,6 +293,12 @@ C: "Secret message.\a\b"
 S: "106 LOGOUT\a\b"
 ```
 
+## Documentation
+
+Documentation for the project is generated using [sphinx](https://www.sphinx-doc.org/en/master/index.html).
+
+After installing all development dependencies, running a make file from docs directory will generate all documentation in needed format.
+
 ## Requirements
 
 - Python 3.11.3 (or higher)
