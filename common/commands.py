@@ -37,6 +37,9 @@ class ClientCommand(TextLength, Enum):
     CLIENT_FULL_POWER = "FULL POWER"
     CLIENT_MESSAGE = 98
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}.{self.name}"
+
 
 class ServerCommand(TextLength, Enum):
     """Enum of server commands."""
@@ -53,3 +56,6 @@ class ServerCommand(TextLength, Enum):
     SERVER_SYNTAX_ERROR = "301 SYNTAX ERROR"
     SERVER_LOGIC_ERROR = "302 LOGIC ERROR"
     SERVER_KEY_OUT_OF_RANGE_ERROR = "303 KEY OUT OF RANGE"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}.{self.name}"
