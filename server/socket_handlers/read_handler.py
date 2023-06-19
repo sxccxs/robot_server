@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from asyncio import StreamReader, wait_for
 from collections import deque
@@ -31,7 +33,7 @@ class ReadHandlerKwargs(TypedDict, total=False):
 class ReadHandler(ABC):
     """Abstract class for a socket reading handler."""
 
-    __slots__ = ("reader", "matcher", "logger", "_chunk_size")
+    __slots__ = ("_reader", "_matcher", "_logger", "_chunk_size")
 
     def __init__(
         self, *, reader: StreamReader, matcher: CommandMatcher, logger: Logger = LOGGER, _chunk_size: int = 8
@@ -44,9 +46,9 @@ class ReadHandler(ABC):
             logger: (optional) Defaults to sublogger of base package logger.
             _chunk_size: (optional) Size of chunks. Defaults to 8.
         """
-        self.reader = reader
-        self.matcher = matcher
-        self.logger = logger
+        self._reader = reader
+        self._matcher = matcher
+        self._logger = logger
         self._chunk_size = _chunk_size
 
     @abstractmethod
@@ -80,7 +82,7 @@ class AnyLengthSepReadHandler(ReadHandler):
 
     @override
     async def read(self, max_len: int, *, timeout: int = TIMEOUT) -> ServerResult[bytes]:
-        self.logger.debug("started read")
+        self._logger.debug("started read")
 
         msg = self._get_from_queue()
         if msg.endswith(CMD_POSTFIX_B):
@@ -88,20 +90,20 @@ class AnyLengthSepReadHandler(ReadHandler):
 
         msg_stream = BytesIO()
         msg_stream.write(msg)
-        self.logger.debug(f"started with data: {msg}")
+        self._logger.debug(f"started with data: {msg}")
 
         length = len(msg)
         separator_spliter = self.SeparatorSplitter(msg)
 
         while length < max_len:
-            self.logger.debug("try read")
+            self._logger.debug("try read")
             match await self._read_chunk(timeout):
                 case Err() as err:
                     return err
                 case Ok(value):
                     chunk = value
 
-            self.logger.debug(f"recieved data: {chunk}")
+            self._logger.debug(f"recieved data: {chunk}")
 
             part_of_current, part_of_next = separator_spliter.check(chunk)
 
@@ -114,7 +116,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             if part_of_next is not None:
                 break
 
-        self.logger.debug(f"return value: {msg_stream.getvalue()}")
+        self._logger.debug(f"return value: {msg_stream.getvalue()}")
         if not (res := msg_stream.getvalue()[:max_len]).endswith(CMD_POSTFIX_B):
             return Err(CommandSyntaxError("Missing message separator."))
         return Ok(res)
@@ -129,7 +131,7 @@ class AnyLengthSepReadHandler(ReadHandler):
             ServerResult[bytes]: Ok(chunk) if read was successful, else Err(ServerTimeoutError).
         """
         try:
-            chunk = await wait_for(self.reader.read(self._chunk_size), timeout=timeout)
+            chunk = await wait_for(self._reader.read(self._chunk_size), timeout=timeout)
         except (TimeoutError, ConnectionResetError):
             return Err(ServerTimeoutError(f"Timeout exceeded: {timeout=}"))
 
@@ -253,15 +255,15 @@ class RechargingReadHandler(ReadHandler):
                 return err
             case Ok(data):
                 pass
-        match self.matcher.match(ClientCommand.CLIENT_RECHARGING, data):
+        match self._matcher.match_none(ClientCommand.CLIENT_RECHARGING, data):
             case Err():
-                match self.matcher.match(ClientCommand.CLIENT_FULL_POWER, data):
+                match self._matcher.match_none(ClientCommand.CLIENT_FULL_POWER, data):
                     case Ok():
                         return Err(LogicError(f"Unexpected command: {ClientCommand.CLIENT_FULL_POWER.name}"))
                     case Err():
                         return Ok(data[:max_len])
             case Ok():
-                self.logger.info("Recharging begin")
+                self._logger.info("Recharging begin")
                 return await self._handle_recharging(max_len, timeout)
 
     async def _handle_recharging(self, max_len: int, timeout: int = TIMEOUT) -> ServerResult[bytes]:
@@ -280,11 +282,11 @@ class RechargingReadHandler(ReadHandler):
             ClientCommand.CLIENT_FULL_POWER.max_len_postfix, timeout=TIMEOUT_RECHARGING
         ):
             case Err() as err:
-                self.logger.debug(f"Error while recharging: {err=}")
+                self._logger.debug(f"Error while recharging: {err=}")
                 return err
             case Ok(data):
                 pass
-        match self.matcher.match(ClientCommand.CLIENT_FULL_POWER, data):
+        match self._matcher.match_none(ClientCommand.CLIENT_FULL_POWER, data):
             case Err(err):
                 return Err(
                     LogicError(
@@ -292,7 +294,7 @@ class RechargingReadHandler(ReadHandler):
                     )
                 )
             case Ok():
-                self.logger.info("Recharging done")
+                self._logger.info("Recharging done")
         match await self._subreader.read(max_len, timeout=timeout):
             case Err() as err:
                 return err

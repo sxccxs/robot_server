@@ -23,5 +23,5 @@ StringCommands = Literal[ClientCommand.CLIENT_USERNAME, ClientCommand.CLIENT_MES
 NumberCommands = Literal[ClientCommand.CLIENT_CONFIRMATION, ClientCommand.CLIENT_KEY_ID]
 """Type reprezenting all client commands with numeric value."""
 
-NonValueCommands = Literal[ClientCommand.CLIENT_RECHARGING, ClientCommand.CLIENT_FULL_POWER]
+NoneValueCommands = Literal[ClientCommand.CLIENT_RECHARGING, ClientCommand.CLIENT_FULL_POWER]
 """Type reprezenting all client commands with no value."""

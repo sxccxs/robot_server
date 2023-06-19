@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Unpack
 
@@ -23,7 +25,7 @@ class AuthenticatorKwargs(BaseServiceKwargs):
 class Authenticator(BaseService, ABC):
     """Abstract class for an authentication service."""
 
-    __slots__ = ("keys_dict",)
+    __slots__ = ("_keys_dict",)
 
     def __init__(self, *, keys_dict: dict[int, KeysPair], **kwargs: Unpack[BaseServiceKwargs]) -> None:
         """
@@ -32,7 +34,7 @@ class Authenticator(BaseService, ABC):
             kwargs (BaseServiceKwargs): Parameters of a base service class.
         """
         super().__init__(**kwargs)
-        self.keys_dict = keys_dict
+        self._keys_dict = keys_dict
 
     @abstractmethod
     async def authenticate(self) -> NoneServerResult:
@@ -58,13 +60,13 @@ class DefaultAuthenticator(Authenticator):
 
     @override
     async def authenticate(self) -> NoneServerResult:
-        self.logger.debug("Authenticator started")
+        self._logger.debug("Authenticator started")
         match await self._get_username():
             case Err() as err:
                 return err
             case Ok(value):
                 username = value
-        self.logger.info(f"Got valid name: {username=}")
+        self._logger.info(f"Got valid name: {username=}")
 
         await self._send_key_request()
 
@@ -74,7 +76,7 @@ class DefaultAuthenticator(Authenticator):
             case Ok(value):
                 key_pair = value
 
-        self.logger.info(
+        self._logger.info(
             f"Got valid key id. Using pair "
             + f"server_key={key_pair.server_key} - client_key={key_pair.client_key}"
         )
@@ -89,11 +91,11 @@ class DefaultAuthenticator(Authenticator):
             case Ok():
                 pass
 
-        self.logger.info(f"Hashes match")
+        self._logger.info(f"Hashes match")
 
         await self._send_ok()
 
-        self.logger.info(f"Authentication completed")
+        self._logger.info(f"Authentication completed")
         return Ok(None)
 
     async def _get_username(self) -> ServerResult[str]:
@@ -102,12 +104,12 @@ class DefaultAuthenticator(Authenticator):
         Returns:
             ServerResult[str]: Ok(username) if data was valid else Err(ServerError).
         """
-        match await self.reader.read(ClientCommand.CLIENT_USERNAME.max_len_postfix):
+        match await self._reader.read(ClientCommand.CLIENT_USERNAME.max_len_postfix):
             case Ok(value):
                 data = value
             case Err(err):
                 return Err(err)
-        return self.matcher.match(ClientCommand.CLIENT_USERNAME, data)
+        return self._matcher.match_str(ClientCommand.CLIENT_USERNAME, data)
 
     async def _get_key_id(self) -> ServerResult[KeysPair]:
         """Receives id of a keys pair, which robot wants to use.
@@ -116,13 +118,13 @@ class DefaultAuthenticator(Authenticator):
         Returns:
             ServerResult[KeysPair]: Ok(keys_pair) if data was valid else Err(ServerError).
         """
-        match await self.reader.read(ClientCommand.CLIENT_KEY_ID.max_len_postfix):
+        match await self._reader.read(ClientCommand.CLIENT_KEY_ID.max_len_postfix):
             case Ok(value):
                 data = value
             case Err(err):
                 return Err(err)
 
-        match self.matcher.match(ClientCommand.CLIENT_KEY_ID, data):
+        match self._matcher.match_num(ClientCommand.CLIENT_KEY_ID, data):
             case Ok(value):
                 key_pair_id = value
             case Err(err):
@@ -132,10 +134,10 @@ class DefaultAuthenticator(Authenticator):
                     case _:
                         return Err(err)
 
-        if key_pair_id not in self.keys_dict:
+        if key_pair_id not in self._keys_dict:
             return Err(CommandKeyIdOutOfRangeError(f"Key id is out of range: key_id={key_pair_id}"))
 
-        return Ok(self.keys_dict[key_pair_id])
+        return Ok(self._keys_dict[key_pair_id])
 
     async def _get_client_confirmation(self, name_hash: int, client_key: int) -> NoneServerResult:
         """Receives confirmation number from robot, checks if it is a valid number and
@@ -148,12 +150,12 @@ class DefaultAuthenticator(Authenticator):
         Returns:
             NoneServerResult: Ok(None) if value was valid, else Err(ServerError).
         """
-        match await self.reader.read(ClientCommand.CLIENT_CONFIRMATION.max_len_postfix):
+        match await self._reader.read(ClientCommand.CLIENT_CONFIRMATION.max_len_postfix):
             case Ok(value):
                 data = value
             case Err(err):
                 return Err(err)
-        match self.matcher.match(ClientCommand.CLIENT_CONFIRMATION, data):
+        match self._matcher.match_num(ClientCommand.CLIENT_CONFIRMATION, data):
             case Ok(value):
                 confirmation = value
             case Err(err):
@@ -170,7 +172,7 @@ class DefaultAuthenticator(Authenticator):
 
     async def _send_key_request(self) -> None:
         """Sends key request."""
-        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_KEY_REQUEST))
+        await self._writer.write(self._creator.create_message(ServerCommand.SERVER_KEY_REQUEST))
 
     async def _send_server_confirmation(self, name_hash: int, server_key: int) -> None:
         """Sends server confirmation message.
@@ -179,12 +181,12 @@ class DefaultAuthenticator(Authenticator):
             name_hash: Encoded robot's username.
             server_key: Server key robot has selected for communication.
         """
-        await self.writer.write(
-            self.creator.create_message(
+        await self._writer.write(
+            self._creator.create_message_int(
                 ServerCommand.SERVER_CONFIRMATION, self._encode_hash(name_hash, server_key)
             )
         )
 
     async def _send_ok(self) -> None:
         """Sends ok message."""
-        await self.writer.write(self.creator.create_message(ServerCommand.SERVER_OK))
+        await self._writer.write(self._creator.create_message(ServerCommand.SERVER_OK))

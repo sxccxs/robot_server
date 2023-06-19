@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from logging import Logger
-from typing import Literal, NotRequired, TypedDict, overload
+from typing import Literal, NotRequired, TypedDict
 
 from typing_extensions import override
 
@@ -22,18 +24,19 @@ class CommandCreatorKwargs(TypedDict):
 class CommandCreator(ABC):
     """Abstract class for a server command creator."""
 
-    __slots__ = ("logger",)
+    __slots__ = ("_logger",)
 
     def __init__(self, *, logger: Logger = LOGGER) -> None:
         """
         Args:
             logger: (optional) Keyword parameter. Defaults to sublogger of base package logger.
         """
-        self.logger = logger
+        self._logger = logger
 
-    @overload
     @abstractmethod
-    def create_message(self, cmd: Literal[ServerCommand.SERVER_CONFIRMATION], confirmation_number: int) -> bytes:
+    def create_message_int(
+        self, cmd: Literal[ServerCommand.SERVER_CONFIRMATION], confirmation_number: int
+    ) -> bytes:
         """Creates a message of server confirmation from given confirmaton number.
 
         Args:
@@ -45,7 +48,6 @@ class CommandCreator(ABC):
         """
         ...
 
-    @overload
     @abstractmethod
     def create_message(self, cmd: ServerCommandWithoutArgument) -> bytes:
         """Creates a message of server command, which does not require any arguments.
@@ -58,21 +60,20 @@ class CommandCreator(ABC):
         """
         ...
 
-    @abstractmethod
-    def create_message(self, cmd: ServerCommand, confirmation_number: int | None = None) -> bytes:
-        ...
-
 
 class DefaultCommandCreator(CommandCreator):
     """Default realization of command creator."""
 
     @override
-    def create_message(self, cmd: ServerCommand, confirmation_number: int | None = None) -> bytes:
-        match cmd:
-            case ServerCommand.SERVER_CONFIRMATION:
-                self.logger.debug(f"Created {cmd.name} cmd with {confirmation_number=}")
-                cmd_text = str(confirmation_number)
-            case _:
-                self.logger.debug(f"Created {cmd.name} cmd")
-                cmd_text = cmd.cmd_text
+    def create_message_int(
+        self, cmd: Literal[ServerCommand.SERVER_CONFIRMATION], confirmation_number: int
+    ) -> bytes:
+        self._logger.debug(f"Created {cmd.name} cmd with {confirmation_number=}")
+        cmd_text = str(confirmation_number)
+        return cmd_text.encode(ENCODING)
+
+    @override
+    def create_message(self, cmd: ServerCommandWithoutArgument) -> bytes:
+        self._logger.debug(f"Created {cmd.name} cmd")
+        cmd_text = cmd.cmd_text
         return cmd_text.encode(ENCODING)

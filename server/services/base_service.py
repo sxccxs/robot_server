@@ -23,7 +23,7 @@ class BaseServiceKwargs(TypedDict):
 class BaseService(ABC):
     """Base class for all services."""
 
-    __slots__ = ("reader", "writer", "matcher", "creator", "logger")
+    __slots__ = ("_reader", "_writer", "_matcher", "_creator", "_logger")
 
     def __init__(
         self,
@@ -43,8 +43,8 @@ class BaseService(ABC):
             creator: Commands creation handler.
             logger_: (optional) Defaults to None. If value is None, sublogger of base package logger will be used.
         """
-        self.reader = reader
-        self.writer = writer
-        self.matcher = matcher
-        self.creator = creator
-        self.logger = logger if logger is not None else LOGGER_BASE.getChild(self.__class__.__name__.lower())
+        self._reader = reader
+        self._writer = writer
+        self._matcher = matcher
+        self._creator = creator
+        self._logger = logger if logger is not None else LOGGER_BASE.getChild(self.__class__.__name__.lower())
