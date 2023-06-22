@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENCODING = "ascii"
 """Messages encoding."""
 
-HOST = "localhost"
+HOST = "127.0.0.1"
 """Server host."""
 
 PORT = 9999
